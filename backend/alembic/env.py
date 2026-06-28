@@ -5,12 +5,20 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.core import db
+from app.core import app as flask_app, db
 import app.db.models  # noqa: F401  -- register models on db.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Use the same database URL the Flask app resolves at runtime. Flask-SQLAlchemy
+# rebases relative SQLite paths onto the instance folder, so deriving the URL
+# from the live app keeps migrations and the app pointed at the same file.
+with flask_app.app_context():
+    config.set_main_option(
+        "sqlalchemy.url", db.engine.url.render_as_string(hide_password=False)
+    )
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
