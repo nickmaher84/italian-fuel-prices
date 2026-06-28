@@ -5,6 +5,7 @@ from flask_admin.theme import Bootstrap4Theme
 from app.admin.views import (
     StandardModelView,
     ReadOnlyModelView,
+    AdminView,
 )
 from app.core import db
 import app.db.models as m
@@ -19,6 +20,7 @@ def init_admin(app):
         name="Fuel Price Admin",
         url="/admin",
         theme=Bootstrap4Theme(swatch="flatly"),
+        index_view=AdminView(),
     )
     admin.add_view(StandardModelView(m.File, db.session))
 
