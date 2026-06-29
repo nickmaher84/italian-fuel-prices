@@ -44,20 +44,34 @@ class HistoricScraper:
     def retrieve_tar_file(self, file_type:str, year:int, quarter:int):
         url = f"https://opendatacarburanti.mise.gov.it/categorized/{file_type}/{year}/{year}_{quarter}_tr.tar.gz"
 
+        head_response = self.conn.head(url)
+        head_response.raise_for_status()
+        etag = head_response.headers.get('ETag', '').strip('"')
+
+        existing = self.db.scalar(
+            db.select(File).filter_by(filename=url, checksum=etag)
+        )
+        if existing is not None and existing.loaded is not None:
+            logger.info(f"Tar file already loaded, skipping {url}")
+            return
+
+        if existing is not None and existing.loaded is None:
+            logger.info(f"Seen before {url} but not loaded, re-downloading to retry")
+
         response = self.conn.get(url)
         logger.info(f"{response.status_code} {response.url} {len(response.content)}")
         response.raise_for_status()
 
-        file = File(
-            filename=response.url,
-            extension=response.url.split(".")[-1],
-            size=len(response.content),
-            checksum=md5(response.content).hexdigest(),
-            modified=parse_date(response.headers.get("Last-Modified")),
-        )
-
-        self.db.add(file)
-        self.db.commit()
+        if existing is None:
+            file = File(
+                filename=response.url,
+                extension=response.url.split(".")[-1],
+                size=len(response.content),
+                checksum=etag,
+                modified=parse_date(response.headers.get("Last-Modified")),
+            )
+            self.db.add(file)
+            self.db.commit()
 
 
     def run(self):
