@@ -53,12 +53,13 @@ class HistoricScraper:
         existing_tar = self.db.scalar(
             db.select(File).filter_by(filename=url, checksum=etag)
         )
-        if existing_tar is not None and existing_tar.loaded is not None:
-            logger.info(f"Tar file already loaded, skipping {url}")
-            return
+        if existing_tar is not None:
+            if existing_tar.loaded is not None:
+                logger.info(f"Tar file already loaded, skipping {url}")
+                return
 
-        if existing_tar is not None and existing_tar.loaded is None:
-            logger.info(f"Seen before {url} but not loaded, re-downloading to retry")
+            else:
+                logger.info(f"Seen before {url} but not loaded, re-downloading to retry")
 
         response = self.conn.get(url)
         logger.info(f"{response.status_code} {response.url} {len(response.content)}")
