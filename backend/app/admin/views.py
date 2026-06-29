@@ -21,9 +21,13 @@ class AdminView(AdminIndexView):
     @expose("/")
     def index(self):
         files = m.File.query.count()
+        stations = m.StationHistory.query.count()
+        prices = m.PriceHistory.query.count()
         return self.render(
             "index.html",
             files=files,
+            stations=stations,
+            prices=prices,
         )
 
     @expose("/scrape", methods=["POST"])
