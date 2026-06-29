@@ -1,6 +1,9 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from app.config import Config
+from logging.config import dictConfig
+from app.config import Config, LOGGING
+
+dictConfig(LOGGING)
 
 app = Flask(__name__)
 app.config.from_object(Config)
