@@ -1,6 +1,8 @@
 from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, expose
+from flask import redirect, url_for
 import app.db.models as m
+from app.services.scrape import historic_scrape
 
 
 class StandardModelView(ModelView):
@@ -23,3 +25,9 @@ class AdminView(AdminIndexView):
             "index.html",
             files=files,
         )
+
+    @expose("/scrape", methods=["POST"])
+    def scrape(self):
+        historic_scrape()
+
+        return redirect(url_for(".index"))

@@ -37,5 +37,19 @@
       </div>
     </div>
   </div>
+
+  <div class="row" style="margin-top: 24px;">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header"><strong>Run Scraper</strong></div>
+        <div class="card-body" style="overflow-x: auto;">
+          <p class="text-muted">Runs the scraper to find new data to load.</p>
+          <form method="post" action="{{ url_for('admin.scrape') }}">
+            <button type="submit" class="btn btn-primary">Run</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
