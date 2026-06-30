@@ -2,7 +2,7 @@ import os
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'development'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///fuel-prices.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'duckdb:///fuel-prices.duckdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 

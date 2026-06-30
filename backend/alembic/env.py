@@ -4,9 +4,16 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from alembic.ddl.impl import DefaultImpl
 
 from app.core import app as flask_app, db
 import app.db.models  # noqa: F401  -- register models on db.metadata
+
+
+class AlembicDuckDBImpl(DefaultImpl):
+    """Alembic implementation for DuckDB."""
+
+    __dialect__ = "duckdb"
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
