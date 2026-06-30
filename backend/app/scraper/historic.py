@@ -13,15 +13,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+PRICES = "prezzo_alle_8"
+STATIONS = "anagrafica_impianti_attivi"
+
+FILE_TYPES = {
+    PRICES: "Prices",
+    STATIONS: "Stations",
+}
+
+
 class HistoricScraper:
-    PRICES   = "prezzo_alle_8"
-    STATIONS = "anagrafica_impianti_attivi"
-
-    FILE_TYPES = {
-        PRICES: "Prices",
-        STATIONS: "Stations",
-    }
-
     def __init__(self, since:int=2015):
         self.db = db.session
         self.conn = requests.Session()
@@ -110,5 +111,5 @@ class HistoricScraper:
 
     def run(self):
         for year, quarter in self.quarters:
-            for file_type in self.FILE_TYPES:
+            for file_type in FILE_TYPES:
                 self.retrieve_tar_file(file_type, year, quarter)
