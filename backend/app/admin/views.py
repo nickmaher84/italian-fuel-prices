@@ -3,6 +3,7 @@ from flask_admin import AdminIndexView, expose
 from flask import redirect, url_for
 import app.db.models as m
 from app.services.scrape import historic_scrape
+from app.core import db
 
 
 class StandardModelView(ModelView):
@@ -15,6 +16,23 @@ class ReadOnlyModelView(StandardModelView):
     can_create = False
     can_edit = False
     can_delete = False
+
+
+class FileModelView(StandardModelView):
+    can_create = False
+    can_edit = False
+
+    def delete_model(self, model):
+        try:
+            file_id = model.file_id
+            m.StationHistory.query.filter_by(file_id=file_id).delete()
+            m.PriceHistory.query.filter_by(file_id=file_id).delete()
+            db.session.delete(model)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            raise
 
 
 class AdminView(AdminIndexView):
