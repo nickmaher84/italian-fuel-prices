@@ -30,7 +30,7 @@ class StationHistory(db.Model):
     latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     extraction_date: Mapped[date | None]
-    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False))
+    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False), ForeignKey('file.file_id', ondelete='CASCADE'))
 
 
 class PriceHistory(db.Model):
@@ -41,4 +41,4 @@ class PriceHistory(db.Model):
     price: Mapped[float] = mapped_column(db.Float)
     entry_date: Mapped[datetime | None] = mapped_column(db.DateTime)
     extraction_date: Mapped[date | None]
-    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False))
+    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False), ForeignKey('file.file_id', ondelete='CASCADE'))
