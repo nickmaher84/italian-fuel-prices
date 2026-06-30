@@ -24,5 +24,7 @@ def init_admin(app):
         index_view=AdminView(),
     )
     admin.add_view(FileModelView(m.File, db.session))
+    admin.add_view(ReadOnlyModelView(m.StationHistory, db.session))
+    admin.add_view(ReadOnlyModelView(m.PriceHistory, db.session))
 
     return admin
