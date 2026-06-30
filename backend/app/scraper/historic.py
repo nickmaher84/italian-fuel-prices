@@ -7,6 +7,7 @@ from hashlib import md5
 
 from app.core import db
 from app.db.models import File
+from app.services.ingestion import ingest_file
 
 import logging
 
@@ -76,6 +77,8 @@ class HistoricScraper:
             )
             self.db.add(tar_file)
             self.db.commit()
+        else:
+            tar_file = existing_tar
 
         content = BytesIO(response.content)
         with tarfile.open(fileobj=content) as tar:
@@ -107,6 +110,21 @@ class HistoricScraper:
 
                 self.db.add(csv_file)
                 self.db.commit()
+
+                if member.size:
+                    ingest_file(
+                        file_type=file_type,
+                        csv_bytes=csv_bytes,
+                        session=self.db,
+                        file_id=csv_file.file_id,
+                    )
+                csv_file.loaded = datetime.now()
+                self.db.add(csv_file)
+                self.db.commit()
+
+        tar_file.loaded = datetime.now()
+        self.db.add(tar_file)
+        self.db.commit()
 
 
     def run(self):
