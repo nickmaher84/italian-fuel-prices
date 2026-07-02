@@ -28,7 +28,7 @@ def to_datetime(value: str) -> datetime | str:
 
 
 class File(db.Model):
-    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    file_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     filename: Mapped[str] = mapped_column(db.String(255))
     extension: Mapped[str] = mapped_column(db.String(255))
     size: Mapped[int]
@@ -38,7 +38,7 @@ class File(db.Model):
 
 
 class StationHistory(db.Model):
-    id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     station_id: Mapped[int] = mapped_column(db.Integer)
     station_name: Mapped[str] = mapped_column(db.String(100), nullable=True)
     station_type: Mapped[str] = mapped_column(db.String(20))
@@ -50,38 +50,15 @@ class StationHistory(db.Model):
     latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     extraction_date: Mapped[date | None]
-    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False))
-
-    column_mapping: dict[str, tuple[str, type]] = {
-        "idimpianto": ("station_id", int),
-        "nomeimpianto": ("station_name", str),
-        "tipoimpianto": ("station_type", str),
-        "gestore": ("operator_name", str),
-        "bandiera": ("brand_name", str),
-        "indirizzo": ("address", str),
-        "comune": ("comune", str),
-        "provincia": ("province_code", str),
-        "latitudine": ("latitude", to_float),
-        "longitudine": ("longitude", to_float),
-        "extraction_date": ("extraction_date", to_datetime),
-    }
+    file_id: Mapped[uuid.UUID] = mapped_column()
 
 
 class PriceHistory(db.Model):
-    id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     station_id: Mapped[int] = mapped_column(db.Integer)
     fuel_description: Mapped[str] = mapped_column(db.String(50))
     self_service: Mapped[bool] = mapped_column(db.Boolean)
     price: Mapped[float] = mapped_column(db.Float)
     entry_date: Mapped[datetime | None] = mapped_column(db.DateTime)
     extraction_date: Mapped[date | None]
-    file_id: Mapped[uuid.UUID] = mapped_column(db.UUID(as_uuid=False))
-
-    column_mapping: dict[str, tuple[str, object]] = {
-        "idimpianto": ("station_id", int),
-        "desccarburante": ("fuel_description", str),
-        "isself": ("self_service", to_bool),
-        "prezzo": ("price", float),
-        "dtcomu": ("entry_date", to_datetime),
-        "extraction_date": ("extraction_date", to_datetime),
-    }
+    file_id: Mapped[uuid.UUID] = mapped_column()
