@@ -20,6 +20,30 @@ STATIONS = "anagrafica_impianti_attivi"
 FILE_TYPES = {
     PRICES: "Prices",
     STATIONS: "Stations",
+
+def to_bool(value: str) -> bool:
+    return bool(int(value))
+
+def to_float(value: str) -> float | None:
+    if value == "NULL":
+        return None
+    return float(value)
+
+def to_datetime(value: str) -> datetime | None:
+    if value is None:
+        return value
+
+    if "/" in value:
+        try:
+            return datetime.strptime(value, "%d/%m/%Y %H:%M:%S")
+        except ValueError:
+            return datetime.strptime(value, "%d/%m/%Y")
+    else:
+        try:
+            return datetime.strptime(value, "%y-%m-%d")
+        except ValueError:
+            return datetime.strptime(value, "%Y-%m-%d")
+
 }
 
 

@@ -6,27 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core import db
 
 
-def to_bool(value: str) -> bool:
-    return bool(int(value))
-
-def to_float(value: str) -> float | None:
-    if value == "NULL":
-        return None
-    return float(value)
-
-def to_datetime(value: str) -> datetime | str:
-    if value is None:
-        return ""
-
-    if "/" in value:
-        try:
-            return datetime.strptime(value, "%d/%m/%Y %H:%M:%S")
-        except ValueError:
-            return datetime.strptime(value, "%d/%m/%Y")
-    else:
-        return datetime.strptime(value, "%Y-%m-%d")
-
-
 class File(db.Model):
     file_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     filename: Mapped[str] = mapped_column(db.String(255))
