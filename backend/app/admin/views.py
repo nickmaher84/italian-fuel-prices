@@ -1,6 +1,6 @@
 from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, expose
-from flask import redirect, url_for
+from flask import redirect, url_for, flash
 import app.db.models as m
 from app.services.scrape import historic_scrape
 from app.core import db
@@ -50,6 +50,10 @@ class AdminView(AdminIndexView):
 
     @expose("/scrape", methods=["POST"])
     def scrape(self):
-        historic_scrape()
+        try:
+            historic_scrape()
+            flash("Scrape successful", category="success")
+        except Exception as e:
+            flash(str(e), "error")
 
         return redirect(url_for(".index"))

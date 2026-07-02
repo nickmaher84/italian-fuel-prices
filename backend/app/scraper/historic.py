@@ -1,13 +1,12 @@
 import requests
 import tarfile
+import uuid
+import pandas as pd
 from io import BytesIO
-from datetime import date, datetime
-from werkzeug.http import parse_date
-from hashlib import md5
+from datetime import datetime
 
 from app.core import db
-from app.db.models import File
-from app.services.ingestion import ingest_file
+from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df
 
 import logging
 
@@ -63,6 +62,8 @@ COLUMN_MAPPING = {
 
 
 class HistoricScraper:
+    site = f"https://opendatacarburanti.mise.gov.it"
+
     def __init__(self, file_type:str, year:int, quarter:int):
         self.db = db.session
         self.conn = requests.Session()
@@ -70,88 +71,120 @@ class HistoricScraper:
         self.year = year
         self.quarter = quarter
 
+        self.error_lines = []
 
+    @property
+    def model(self):
+        from app.db.models import PriceHistory, StationHistory
 
+        model_map = {
+            PRICES: PriceHistory,
+            STATIONS: StationHistory,
+        }
 
-    def retrieve_tar_file(self, file_type:str, year:int, quarter:int):
-        url = f"https://opendatacarburanti.mise.gov.it/categorized/{file_type}/{year}/{year}_{quarter}_tr.tar.gz"
+        return model_map[self.file_type]
 
-        head_response = self.conn.head(url)
-        head_response.raise_for_status()
-        etag = head_response.headers.get('ETag', '').strip('"')
+    def run(self):
+        url = f"{self.site}/categorized/{self.file_type}/{self.year}/{self.year}_{self.quarter}_tr.tar.gz"
 
-        existing_tar = self.db.scalar(
-            db.select(File).filter_by(filename=url, checksum=etag)
-        )
-        if existing_tar is not None:
-            if existing_tar.loaded is not None:
-                logger.info(f"Tar file already loaded, skipping {url}")
-                return
+        file = get_or_create_file(self.db, self.conn, url=url)
 
-            else:
-                logger.info(f"Seen before {url} but not loaded, re-downloading to retry")
+        if file.loaded:
+            logger.info(f"Already loaded, skipping {url}")
+            return
 
-        response = self.conn.get(url)
-        logger.info(f"{response.status_code} {response.url} {len(response.content)}")
-        response.raise_for_status()
+        file_obj = self.download_tar(url)
 
-        if existing_tar is None:
-            tar_file = File(
-                filename=response.url,
-                extension=response.url.split(".")[-1],
-                size=len(response.content),
-                checksum=etag,
-                modified=parse_date(response.headers.get("Last-Modified")),
-            )
-            self.db.add(tar_file)
-            self.db.commit()
-        else:
-            tar_file = existing_tar
-
-        content = BytesIO(response.content)
-        with tarfile.open(fileobj=content) as tar:
-            for member in tar.getmembers():
+        with tarfile.open(fileobj=file_obj) as t:
+            for member in t.getmembers():
                 logger.info(f"Extracting {member.name}")
-                csv_content = tar.extractfile(member)
-                csv_bytes = csv_content.read()
+                m = get_or_create_member(self.db, member)
 
-                csv_checksum = md5(csv_bytes).hexdigest()
-                csv_filename = f"{response.url}/{member.name}"
-
-                existing_csv = self.db.scalar(
-                    db.select(File).filter_by(filename=csv_filename, checksum=csv_checksum)
-                )
-                if existing_csv is not None:
-                    if existing_csv.loaded is not None:
-                        logger.info(f"Already loaded {member.name}, skipping")
-                    else:
-                        logger.info(f"Seen before {member.name}, will retry loading")
+                if m.loaded:
+                    logger.info(f"Already loaded, skipping {member.name}")
                     continue
 
-                csv_file = File(
-                    filename=csv_filename,
-                    extension=member.name.split(".")[-1],
-                    size=member.size,
-                    checksum=csv_checksum,
-                    modified=datetime.fromtimestamp(member.mtime),
-                )
-
-                self.db.add(csv_file)
-                self.db.commit()
+                extract = t.extractfile(member)
 
                 if member.size:
-                    ingest_file(
-                        file_type=file_type,
-                        csv_bytes=csv_bytes,
-                        session=self.db,
-                        file_id=csv_file.file_id,
-                    )
-                csv_file.loaded = datetime.now()
-                self.db.add(csv_file)
+                    records = self.parse_csv(extract)
+                    if records:
+                        df = self.create_df(records)
+                        df["file_id"] = m.file_id
+                        ingest_df(session=self.db, file=m, model=self.model, df=df)
+
+                m.loaded = datetime.now()
+                self.db.add(m)
                 self.db.commit()
 
-        tar_file.loaded = datetime.now()
-        self.db.add(tar_file)
+        file.loaded = datetime.now()
+        self.db.add(file)
         self.db.commit()
 
+    def download_tar(self, url:str):
+        logger.info(f"Downloading {url}")
 
+        response = self.conn.get(url)
+        response.raise_for_status()
+
+        return BytesIO(response.content)
+
+    def parse_csv(self, extract:BytesIO):
+        csv_bytes = extract.read()
+        text = csv_bytes.decode('utf-8')
+        lines = text.split('\n')
+
+        extraction_date = None
+        header = None
+        delimiter = ";"
+        delimiter_count = 0
+        columns = []
+
+        records = []
+        for idx, line in enumerate(lines, 1):
+            if line.startswith('Estrazione del'):
+                extraction_date = line.strip()[-8:]
+                logger.debug(f"Extraction date found on row {idx}: {extraction_date}")
+
+            elif line.strip() and header is None:
+                header = line
+                logger.debug(f"Header found on row {idx}: {header}")
+                delimiter: str = '|' if header.count('|') > header.count(';') else ';'
+                logger.debug(f"File delimiter is {delimiter}")
+                delimiter_count = header.count(delimiter)
+
+                columns = header.split(delimiter)
+
+            elif line.strip():
+                if line.count(delimiter) != delimiter_count:
+                    logger.error(f"Row {idx} has incorrect number of columns: {line}")
+                    self.error_lines.append(line)
+                    continue
+
+                record = dict(zip(columns, line.split(delimiter)))
+                record['extraction_date'] = extraction_date
+                record['id'] = uuid.uuid4().hex
+                records.append(record)
+
+        if header is None:
+            logger.error("No header row found. Skipping.")
+
+        return records
+
+
+    def create_df(self, records:list[dict]):
+        df = pd.DataFrame.from_records(records)
+
+        new_data = {}
+        for col in df.columns:
+            normalised = col.replace(' ', '').lower()
+            if normalised in COLUMN_MAPPING:
+                model_col, converter = COLUMN_MAPPING[normalised]
+                data = df[col]
+                if converter not in (int, str, float):
+                    data = data.apply(converter)
+                new_data[model_col] = data
+            else:
+                new_data[col] = df[col]
+
+        return pd.DataFrame(new_data)
