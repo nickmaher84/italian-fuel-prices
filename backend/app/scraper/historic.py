@@ -17,9 +17,8 @@ logger = logging.getLogger(__name__)
 PRICES = "prezzo_alle_8"
 STATIONS = "anagrafica_impianti_attivi"
 
-FILE_TYPES = {
-    PRICES: "Prices",
-    STATIONS: "Stations",
+FILE_TYPES = [PRICES, STATIONS]
+
 
 def to_bool(value: str) -> bool:
     return bool(int(value))
@@ -44,30 +43,35 @@ def to_datetime(value: str) -> datetime | None:
         except ValueError:
             return datetime.strptime(value, "%Y-%m-%d")
 
+COLUMN_MAPPING = {
+    "idimpianto": ("station_id", int),
+    "nomeimpianto": ("station_name", str),
+    "tipoimpianto": ("station_type", str),
+    "gestore": ("operator_name", str),
+    "bandiera": ("brand_name", str),
+    "indirizzo": ("address", str),
+    "comune": ("comune", str),
+    "provincia": ("province_code", str),
+    "latitudine": ("latitude", to_float),
+    "longitudine": ("longitude", to_float),
+    "desccarburante": ("fuel_description", str),
+    "isself": ("self_service", to_bool),
+    "prezzo": ("price", float),
+    "dtcomu": ("entry_date", to_datetime),
+    "extraction_date": ("extraction_date", to_datetime),
 }
 
 
 class HistoricScraper:
-    def __init__(self, since:int=2015):
+    def __init__(self, file_type:str, year:int, quarter:int):
         self.db = db.session
         self.conn = requests.Session()
-        self.quarters = self.generate_quarters(since)
+        self.file_type = file_type
+        self.year = year
+        self.quarter = quarter
 
-    @staticmethod
-    def generate_quarters(since:int=2015):
-        y = since
-        q = 0
 
-        today = date.today()
-        end_year = today.year
-        end_quarter = today.month // 3
 
-        while not (y == end_year and q == end_quarter):
-            q += 1
-            if q > 4:
-                y += 1
-                q = 1
-            yield y, q
 
     def retrieve_tar_file(self, file_type:str, year:int, quarter:int):
         url = f"https://opendatacarburanti.mise.gov.it/categorized/{file_type}/{year}/{year}_{quarter}_tr.tar.gz"
@@ -151,7 +155,3 @@ class HistoricScraper:
         self.db.commit()
 
 
-    def run(self):
-        for year, quarter in self.quarters:
-            for file_type in FILE_TYPES:
-                self.retrieve_tar_file(file_type, year, quarter)
