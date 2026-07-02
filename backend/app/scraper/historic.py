@@ -2,6 +2,7 @@ import requests
 import tarfile
 import uuid
 import pandas as pd
+import gc
 from io import BytesIO
 from datetime import datetime
 
@@ -112,14 +113,20 @@ class HistoricScraper:
                         df = self.create_df(records)
                         df["file_id"] = m.file_id
                         ingest_df(session=self.db, file=m, model=self.model, df=df)
+                        del df, records
 
                 m.loaded = datetime.now()
                 self.db.add(m)
                 self.db.commit()
+                self.db.expunge_all()
 
         file.loaded = datetime.now()
         self.db.add(file)
         self.db.commit()
+        self.db.expunge_all()
+        
+        gc.collect()
+        logger.info(f"Finished loading {url}")
 
     def download_tar(self, url:str):
         logger.info(f"Downloading {url}")
