@@ -2,6 +2,7 @@ from datetime import datetime, date
 import uuid
 
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Index
 
 from app.core import db
 
@@ -31,6 +32,10 @@ class StationHistory(db.Model):
     extraction_date: Mapped[date | None]
     file_id: Mapped[uuid.UUID] = mapped_column()
 
+    __table_args__ = (
+        Index('idx_station_history_file_id', 'file_id'),
+    )
+
 
 class PriceHistory(db.Model):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -41,3 +46,7 @@ class PriceHistory(db.Model):
     entry_date: Mapped[datetime | None] = mapped_column(db.DateTime)
     extraction_date: Mapped[date | None]
     file_id: Mapped[uuid.UUID] = mapped_column()
+
+    __table_args__ = (
+        Index('idx_price_history_file_id', 'file_id'),
+    )
