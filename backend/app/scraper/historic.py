@@ -100,6 +100,10 @@ class HistoricScraper:
 
         with tarfile.open(fileobj=file_obj) as t:
             for member in t.getmembers():
+                if member.isdir():
+                    logger.info(f"Skipping {member.name}")
+                    continue
+
                 logger.info(f"Extracting {member.name}")
                 m = get_or_create_member(self.db, member)
 
