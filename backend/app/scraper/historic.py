@@ -26,6 +26,8 @@ def to_bool(value: str) -> bool:
 def to_float(value: str) -> float | None:
     if value == "NULL":
         return None
+    elif value == "":
+        return None
     return float(value)
 
 def to_datetime(value: str) -> datetime | None:
