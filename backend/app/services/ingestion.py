@@ -1,11 +1,17 @@
 import logging
 from datetime import datetime
 from werkzeug.http import parse_date
+from pathlib import Path
 
 from app.core import db
 from app.db.models import File
 
 logger = logging.getLogger(__name__)
+
+
+def get_extension(filename):
+    path = Path(filename)
+    return ''.join(path.suffixes)
 
 
 def get_or_create_file(session, conn, url):
@@ -26,7 +32,7 @@ def get_or_create_file(session, conn, url):
 
     file = File(
         filename=response.url,
-        extension=response.url.split(".")[-1],
+        extension=get_extension(response.url),
         checksum=checksum,
         modified=modified,
         size=size,
@@ -52,7 +58,7 @@ def get_or_create_member(session, member):
 
     file = File(
         filename=member.name,
-        extension=member.name.split(".")[-1],
+        extension=get_extension(member.name),
         checksum=checksum,
         modified=modified,
         size=size,
