@@ -1,5 +1,6 @@
 from datetime import datetime, date
 import uuid
+import re
 
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Index
@@ -15,6 +16,24 @@ class File(db.Model):
     checksum: Mapped[str] = mapped_column(db.String(255))
     modified: Mapped[datetime | None]
     loaded: Mapped[datetime | None]
+
+    def file_date(self) -> date | None:
+        match = re.search(r'(\d{4})(\d{2})(\d{2})', self.filename)
+        if match:
+            year = int(match.group(1))
+            month = int(match.group(2))
+            day = int(match.group(3))
+            return date(year, month, day)
+        return None
+
+    def quarter(self) -> str | None:
+        file_date = self.file_date()
+        if file_date:
+            year = file_date.year
+            month = file_date.month
+            quarter = (month - 1) // 3 + 1
+            return f"{year}Q{quarter}"
+        return None
 
 
 class StationHistory(db.Model):
