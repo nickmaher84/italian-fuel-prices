@@ -8,16 +8,11 @@ from datetime import datetime
 
 from app.core import db
 from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df, save_errors
+from app.db.models import FileType
 
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-PRICES = "prezzo_alle_8"
-STATIONS = "anagrafica_impianti_attivi"
-
-FILE_TYPES = [PRICES, STATIONS]
 
 
 def to_bool(value: str) -> bool:
@@ -60,7 +55,7 @@ COLUMN_MAPPING = {
 class HistoricScraper:
     site = f"https://opendatacarburanti.mise.gov.it"
 
-    def __init__(self, file_type:str, year:int, quarter:int):
+    def __init__(self, file_type:FileType, year:int, quarter:int):
         self.db = db.session
         self.conn = requests.Session()
         self.file_type = file_type
@@ -72,14 +67,14 @@ class HistoricScraper:
         from app.db.models import PriceHistory, StationHistory
 
         model_map = {
-            PRICES: PriceHistory,
-            STATIONS: StationHistory,
+            FileType.PRICES: PriceHistory,
+            FileType.STATIONS: StationHistory,
         }
 
         return model_map[self.file_type]
 
     def run(self):
-        url = f"{self.site}/categorized/{self.file_type}/{self.year}/{self.year}_{self.quarter}_tr.tar.gz"
+        url = f"{self.site}/categorized/{self.file_type.value}/{self.year}/{self.year}_{self.quarter}_tr.tar.gz"
 
         file = get_or_create_file(self.db, self.conn, url=url)
 

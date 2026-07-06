@@ -5,7 +5,7 @@ from werkzeug.http import parse_date
 from pathlib import Path
 
 from app.core import db
-from app.db.models import File, ParserError
+from app.db.models import File, FileType, ParserError
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 def get_extension(filename):
     path = Path(filename)
     return ''.join(path.suffixes)
+
+
+def get_file_type(filename):
+    for file_type in FileType:
+        if file_type.value in filename:
+            return file_type
+    return None
 
 
 def get_or_create_file(session, conn, url):
@@ -37,6 +44,7 @@ def get_or_create_file(session, conn, url):
         checksum=checksum,
         modified=modified,
         size=size,
+        file_type=get_file_type(response.url)
     )
 
     session.add(file)
@@ -63,6 +71,7 @@ def get_or_create_member(session, member):
         checksum=checksum,
         modified=modified,
         size=size,
+        file_type=get_file_type(member.name),
     )
 
     session.add(file)

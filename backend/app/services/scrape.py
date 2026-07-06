@@ -1,10 +1,11 @@
-from app.scraper.historic import HistoricScraper, FILE_TYPES
+from app.scraper.historic import HistoricScraper
+from app.db.models import FileType
 from datetime import date
 
 
 def historic_scrape():
     for year, quarter in generate_quarters():
-        for file_type in FILE_TYPES:
+        for file_type in FileType:
             scraper = HistoricScraper(
                 file_type=file_type,
                 year=year,

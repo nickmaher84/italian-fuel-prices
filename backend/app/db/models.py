@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime, date
 import uuid
 import re
@@ -8,11 +9,17 @@ from sqlalchemy import Index, ForeignKey, ForeignKeyConstraint
 from app.core import db
 
 
+class FileType(enum.Enum):
+    PRICES = "prezzo_alle_8"
+    STATIONS = "anagrafica_impianti_attivi"
+
+
 class File(db.Model):
     file_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     filename: Mapped[str] = mapped_column(db.String(255))
     extension: Mapped[str] = mapped_column(db.String(255))
     size: Mapped[int]
+    file_type: Mapped[FileType | None] = mapped_column(db.Enum(FileType, name="file_type"), nullable=True)
     checksum: Mapped[str] = mapped_column(db.String(255))
     modified: Mapped[datetime | None]
     loaded: Mapped[datetime | None]
