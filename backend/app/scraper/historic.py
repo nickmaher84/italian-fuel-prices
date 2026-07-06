@@ -7,7 +7,7 @@ from io import BytesIO
 from datetime import datetime
 
 from app.core import db
-from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df
+from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df, save_errors
 
 import logging
 
@@ -67,8 +67,6 @@ class HistoricScraper:
         self.year = year
         self.quarter = quarter
 
-        self.error_lines = []
-
     @property
     def model(self):
         from app.db.models import PriceHistory, StationHistory
@@ -107,7 +105,7 @@ class HistoricScraper:
                 extract = t.extractfile(member)
 
                 if member.size:
-                    records = self.parse_csv(extract)
+                    records, errors = self.parse_csv(extract)
                     if records:
                         df = self.create_df(records)
                         df["file_id"] = m.file_id
@@ -115,6 +113,9 @@ class HistoricScraper:
                             df["extraction_date"] = m.file_date()
                         ingest_df(session=self.db, file=m, model=self.model, df=df)
                         del df, records
+
+                    if errors:
+                        save_errors(self.db, m, errors)
 
                 m.loaded = datetime.now()
                 self.db.add(m)
@@ -149,6 +150,8 @@ class HistoricScraper:
         columns = []
 
         records = []
+        errors = []
+
         for idx, line in enumerate(lines, 1):
             if line.startswith('Estrazione del'):
                 extraction_date = line.strip()[-8:]
@@ -166,7 +169,7 @@ class HistoricScraper:
             elif line.strip():
                 if line.count(delimiter) != delimiter_count:
                     logger.error(f"Row {idx} has incorrect number of columns: {line}")
-                    self.error_lines.append(line)
+                    errors.append([idx, line])
                     continue
 
                 record = dict(zip(columns, line.split(delimiter)))
@@ -177,8 +180,7 @@ class HistoricScraper:
         if header is None:
             logger.error("No header row found. Skipping.")
 
-        return records
-
+        return records, errors
 
     def create_df(self, records:list[dict]):
         df = pd.DataFrame.from_records(records)

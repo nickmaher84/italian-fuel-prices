@@ -71,3 +71,15 @@ class PriceHistory(db.Model):
         ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_price_history_file_id'),
         Index('idx_price_history_file_id', 'file_id'),
     )
+
+
+class ParserError(db.Model):
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'), primary_key=True)
+    line_number: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    line: Mapped[str] = mapped_column(db.Text)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_parser_error_file_id'),
+        Index('idx_parser_error_file_id', 'file_id'),
+    )

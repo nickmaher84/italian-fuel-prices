@@ -5,7 +5,7 @@ from werkzeug.http import parse_date
 from pathlib import Path
 
 from app.core import db
-from app.db.models import File
+from app.db.models import File, ParserError
 
 logger = logging.getLogger(__name__)
 
@@ -89,3 +89,27 @@ def ingest_df(session, file, model, df):
     session.commit()
 
     logger.info(f"Inserted {len(df)} rows into {model.__tablename__}")
+
+
+def save_errors(session, file, error_records):
+    session.query(ParserError).filter(ParserError.file_id == file.file_id).delete()
+
+    try:
+        for idx, line in error_records:
+            record = ParserError(
+                file_id=file.file_id,
+                line_number=idx,
+                line=line,
+            )
+            session.add(record)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to insert into {ParserError.__tablename__}: {e}")
+        raise
+
+    file.loaded = datetime.now()
+    session.add(file)
+    session.commit()
+
+    logger.info(f"Inserted {len(error_records)} rows into {ParserError.__tablename__}")
