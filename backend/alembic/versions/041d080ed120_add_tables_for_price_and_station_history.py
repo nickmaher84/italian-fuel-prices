@@ -27,7 +27,7 @@ def upgrade() -> None:
     sa.Column('fuel_description', sa.String(length=50), nullable=False),
     sa.Column('self_service', sa.Boolean(), nullable=False),
     sa.Column('price', sa.Numeric(9, 3), nullable=False),
-    sa.Column('entry_date', sa.Date(), nullable=False),
+    sa.Column('entry_date', sa.DateTime(), nullable=False),
     sa.Column('extraction_date', sa.Date(), nullable=True),
     sa.Column('file_id', sa.UUID(), nullable=False),
     sa.PrimaryKeyConstraint('id')

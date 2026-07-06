@@ -63,7 +63,7 @@ class PriceHistory(db.Model):
     fuel_description: Mapped[str] = mapped_column(db.String(50))
     self_service: Mapped[bool] = mapped_column(db.Boolean)
     price: Mapped[float] = mapped_column(db.Numeric(9,3))
-    entry_date: Mapped[datetime | None] = mapped_column(db.DateTime)
+    entry_date: Mapped[datetime | None] = mapped_column(db.DateTime, nullable=False)
     extraction_date: Mapped[date | None]
     file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
