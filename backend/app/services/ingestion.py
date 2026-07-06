@@ -1,4 +1,5 @@
 import logging
+import math
 from datetime import datetime
 from werkzeug.http import parse_date
 from pathlib import Path
@@ -50,7 +51,7 @@ def get_or_create_member(session, member):
     size = member.size
 
     existing = session.scalar(
-        db.select(File).filter_by(filename=member.name, checksum=checksum)
+        db.select(File).filter_by(filename=member.name, checksum=str(checksum))
     )
 
     if existing:
@@ -72,22 +73,19 @@ def get_or_create_member(session, member):
 
 def ingest_df(session, file, model, df):
     session.query(model).filter(model.file_id == file.file_id).delete()
-    session.commit()
 
-    table_name = model.__tablename__
-    df = df[list(model.__table__.columns.keys())]
-
-    duckdb_conn = session.connection().connection
-    data = duckdb_conn.from_df(df)
     try:
-        data.insert_into(table_name)
+        rows = df.to_dict(orient='records')
+        rows = [{k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in row.items()} for row in rows]
+        session.bulk_insert_mappings(model, rows)
+        session.commit()
     except Exception as e:
         session.rollback()
-        logger.error(f"Failed to insert into {table_name}: {e}")
+        logger.error(f"Failed to insert into {model.__tablename__}: {e}")
         raise
 
     file.loaded = datetime.now()
     session.add(file)
     session.commit()
 
-    logger.info(f"Inserted {len(df)} rows into {table_name}")
+    logger.info(f"Inserted {len(df)} rows into {model.__tablename__}")

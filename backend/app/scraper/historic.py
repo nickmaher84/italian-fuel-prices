@@ -23,13 +23,6 @@ FILE_TYPES = [PRICES, STATIONS]
 def to_bool(value: str) -> bool:
     return bool(int(value))
 
-def to_float(value: str) -> float | None:
-    if value == "NULL":
-        return None
-    elif value == "":
-        return None
-    return float(value)
-
 def to_datetime(value: str) -> datetime | None:
     if value is None:
         return value
@@ -54,8 +47,8 @@ COLUMN_MAPPING = {
     "indirizzo": ("address", str),
     "comune": ("comune", str),
     "provincia": ("province_code", str),
-    "latitudine": ("latitude", to_float),
-    "longitudine": ("longitude", to_float),
+    "latitudine": ("latitude", float),
+    "longitudine": ("longitude", float),
     "desccarburante": ("fuel_description", str),
     "isself": ("self_service", to_bool),
     "prezzo": ("price", float),
@@ -187,6 +180,7 @@ class HistoricScraper:
 
     def create_df(self, records:list[dict]):
         df = pd.DataFrame.from_records(records)
+        df = df.replace(["NULL", ""], None)
 
         new_data = {}
         for col in df.columns:

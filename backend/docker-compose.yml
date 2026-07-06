@@ -1,0 +1,18 @@
+name: fuel-prices
+
+services:
+  db:
+    image: postgres:15              # Plain PostgreSQL 15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${DATABASE_USERNAME:-}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-}
+      POSTGRES_DB:       fuel-prices
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    shm_size: 1gb
+
+volumes:
+  postgres_data:

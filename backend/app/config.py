@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'development'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'duckdb:///fuel-prices.duckdb'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://localhost/fuel_prices'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
