@@ -44,8 +44,8 @@ class StationHistory(db.Model):
     operator_name: Mapped[str] = mapped_column(db.String(255), nullable=True)
     brand_name: Mapped[str] = mapped_column(db.String(50), nullable=True)
     address: Mapped[str] = mapped_column(db.String(255), nullable=True)
-    comune: Mapped[str] = mapped_column(db.String(50), nullable=False)
-    province_code: Mapped[str] = mapped_column(db.String(2), nullable=False)
+    comune: Mapped[str] = mapped_column(db.String(50), nullable=True)
+    province_code: Mapped[str] = mapped_column(db.String(2), nullable=True)
     latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     extraction_date: Mapped[date | None]
