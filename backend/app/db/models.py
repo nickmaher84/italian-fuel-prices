@@ -3,7 +3,7 @@ import uuid
 import re
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Index
+from sqlalchemy import Index, ForeignKey, ForeignKeyConstraint
 
 from app.core import db
 
@@ -49,9 +49,10 @@ class StationHistory(db.Model):
     latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     extraction_date: Mapped[date | None]
-    file_id: Mapped[uuid.UUID] = mapped_column()
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
     __table_args__ = (
+        ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_station_history_file_id'),
         Index('idx_station_history_file_id', 'file_id'),
     )
 
@@ -64,8 +65,9 @@ class PriceHistory(db.Model):
     price: Mapped[float] = mapped_column(db.Numeric(9,3))
     entry_date: Mapped[datetime | None] = mapped_column(db.DateTime)
     extraction_date: Mapped[date | None]
-    file_id: Mapped[uuid.UUID] = mapped_column()
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
     __table_args__ = (
+        ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_price_history_file_id'),
         Index('idx_price_history_file_id', 'file_id'),
     )
