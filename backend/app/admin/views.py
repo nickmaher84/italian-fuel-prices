@@ -21,6 +21,7 @@ class ReadOnlyModelView(StandardModelView):
 class FileModelView(StandardModelView):
     can_create = False
     can_edit = False
+    column_filters = ["file_type", "extension", "filename"]
 
     def delete_model(self, model):
         try:
@@ -34,6 +35,13 @@ class FileModelView(StandardModelView):
             db.session.rollback()
             raise
 
+
+class StationHistoryModelView(ReadOnlyModelView):
+    column_filters = ["station_id", "extraction_date", "comune", "province_code", "brand_name", "operator_name"]
+
+
+class PriceHistoryModelView(ReadOnlyModelView):
+    column_filters = ["station_id", "extraction_date", "fuel_description", "self_service"]
 
 class AdminView(AdminIndexView):
     @expose("/")
