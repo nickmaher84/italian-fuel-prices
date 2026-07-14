@@ -126,8 +126,7 @@ class HistoricScraper:
                         ingest_df(session=self.db, file=m, model=self.model, df=df)
                         del df, records
 
-                    if errors:
-                        save_errors(self.db, m, errors)
+                    save_errors(self.db, m, errors)
 
                 m.loaded = datetime.now()
                 self.db.add(m)
