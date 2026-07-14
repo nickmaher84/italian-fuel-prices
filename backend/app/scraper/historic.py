@@ -5,6 +5,7 @@ import pandas as pd
 import gc
 from io import BytesIO
 from datetime import datetime
+from html import unescape
 
 from app.core import db
 from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df, save_errors
@@ -32,6 +33,22 @@ def to_datetime(value: str) -> datetime | None:
             return datetime.strptime(value, "%y-%m-%d")
         except ValueError:
             return datetime.strptime(value, "%Y-%m-%d")
+
+def preprocess_line(values: list[str], delimiter: str, column_count: int) -> list[str]:
+    values = [value.strip().strip('"') for value in values]
+
+    for i in ["gestori.prezzibenzina.it", "BENZINA.IT", ""]:
+        while i in values and len(values) > column_count:
+            n = values.index(i)
+            values[n-1] += f" {delimiter} " + values[n]
+            del values[n]
+
+    if len(values) > column_count:
+        values[5] += values[6]
+        del values[6]
+
+    return values
+
 
 COLUMN_MAPPING = {
     "idimpianto": ("station_id", int),
@@ -141,7 +158,6 @@ class HistoricScraper:
         extraction_date = None
         header = None
         delimiter = ";"
-        delimiter_count = 0
         columns = []
 
         records = []
@@ -157,17 +173,18 @@ class HistoricScraper:
                 logger.debug(f"Header found on row {idx}: {header}")
                 delimiter: str = '|' if header.count('|') > header.count(';') else ';'
                 logger.debug(f"File delimiter is {delimiter}")
-                delimiter_count = header.count(delimiter)
 
                 columns = header.split(delimiter)
 
             elif line.strip():
-                if line.count(delimiter) != delimiter_count:
-                    logger.error(f"Row {idx} has incorrect number of columns: {line}")
+                fields = preprocess_line(unescape(line).split(delimiter), delimiter, len(columns))
+
+                if len(fields) != len(columns):
+                    logger.error(f"Row {idx} has {len(fields)} fields but expected {len(columns)}: {line}")
                     errors.append([idx, line])
                     continue
 
-                record = dict(zip(columns, line.split(delimiter)))
+                record = dict(zip(columns, fields))
                 record['extraction_date'] = extraction_date
                 record['id'] = uuid.uuid4().hex
                 records.append(record)
