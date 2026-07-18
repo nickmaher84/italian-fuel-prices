@@ -20,7 +20,7 @@ def generate_quarters(since:int=2015):
 
     today = date.today()
     end_year = today.year
-    end_quarter = today.month // 3
+    end_quarter = (today.month - 1) // 3 + 1
 
     while not (y == end_year and q == end_quarter):
         q += 1

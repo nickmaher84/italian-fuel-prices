@@ -121,7 +121,7 @@ class HistoricScraper:
                     if records:
                         df = self.create_df(records)
                         df["file_id"] = m.file_id
-                        if df["extraction_date"] is None:
+                        if df["extraction_date"].isna().all():
                             df["extraction_date"] = m.file_date()
                         ingest_df(session=self.db, file=m, model=self.model, df=df)
                         del df, records
