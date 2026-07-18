@@ -87,17 +87,17 @@ def ingest_df(session, file, model, df):
         rows = df.to_dict(orient='records')
         rows = [{k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in row.items()} for row in rows]
         session.bulk_insert_mappings(model, rows)
+
+        file.loaded = datetime.now()
+        session.add(file)
         session.commit()
+
+        logger.info(f"Inserted {len(df)} rows into {model.__tablename__}")
+
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert into {model.__tablename__}: {e}")
-        raise
-
-    file.loaded = datetime.now()
-    session.add(file)
-    session.commit()
-
-    logger.info(f"Inserted {len(df)} rows into {model.__tablename__}")
+        # raise
 
 
 def save_errors(session, file, error_records):
