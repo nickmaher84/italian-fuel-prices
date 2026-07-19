@@ -4,6 +4,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from alembic.operations import Operations
 
 from app.core import app as flask_app, db
 import app.db.models  # noqa: F401  -- register models on db.metadata
@@ -62,6 +63,45 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _is_partitioned_table_or_child(table_name: str) -> bool:
+    """Check if a table is partitioned or a child partition of a partitioned table."""
+    partitioned_tables = {
+        table.name for table in target_metadata.tables.values()
+        if 'partition_by' in table.info
+    }
+
+    if table_name in partitioned_tables:
+        return True
+
+    for parent in partitioned_tables:
+        if table_name.startswith(parent + '_'):
+            return True
+
+    return False
+
+
+def process_revision_directives(context, revision, directives):
+    """Filter out migration directives that would alter partitioned tables."""
+    for directive in directives:
+        if directive.upgrade_ops:
+            filtered_ops = []
+            for op in directive.upgrade_ops.ops:
+                table_name = getattr(op, 'table_name', None)
+                if table_name and _is_partitioned_table_or_child(table_name):
+                    continue
+                filtered_ops.append(op)
+            directive.upgrade_ops.ops = filtered_ops
+
+        if directive.downgrade_ops:
+            filtered_ops = []
+            for op in directive.downgrade_ops.ops:
+                table_name = getattr(op, 'table_name', None)
+                if table_name and _is_partitioned_table_or_child(table_name):
+                    continue
+                filtered_ops.append(op)
+            directive.downgrade_ops.ops = filtered_ops
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -77,7 +117,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            process_revision_directives=process_revision_directives,
         )
 
         with context.begin_transaction():

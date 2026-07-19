@@ -55,12 +55,14 @@ class StationHistory(db.Model):
     province_code: Mapped[str] = mapped_column(db.String(2), nullable=True)
     latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
-    extraction_date: Mapped[date | None]
+    extraction_date: Mapped[date] = mapped_column(primary_key=True)
     file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
     __table_args__ = (
         ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_station_history_file_id'),
         Index('idx_station_history_file_id', 'file_id'),
+        Index('idx_station_history_extraction_date', 'extraction_date'),
+        {'info': {'partition_by': 'RANGE (extraction_date)'}},
     )
 
 
@@ -71,12 +73,14 @@ class PriceHistory(db.Model):
     self_service: Mapped[bool] = mapped_column(db.Boolean)
     price: Mapped[float] = mapped_column(db.Numeric(9,3))
     entry_date: Mapped[datetime | None] = mapped_column(db.DateTime, nullable=False)
-    extraction_date: Mapped[date | None]
+    extraction_date: Mapped[date | None] = mapped_column(primary_key=True)
     file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
     __table_args__ = (
         ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_price_history_file_id'),
         Index('idx_price_history_file_id', 'file_id'),
+        Index('idx_price_history_extraction_date', 'extraction_date'),
+        {'info': {'partition_by': 'RANGE (extraction_date)'}},
     )
 
 
