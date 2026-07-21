@@ -30,9 +30,12 @@ def to_datetime(value: str) -> datetime | None:
             return datetime.strptime(value, "%d/%m/%Y")
     else:
         try:
-            return datetime.strptime(value, "%y-%m-%d")
+            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            return datetime.strptime(value, "%Y-%m-%d")
+            try:
+                return datetime.strptime(value, "%y-%m-%d")
+            except ValueError:
+                return datetime.strptime(value, "%Y-%m-%d")
 
 def preprocess_line(values: list[str], delimiter: str, column_count: int) -> list[str]:
     values = [value.strip().strip('"') for value in values]
