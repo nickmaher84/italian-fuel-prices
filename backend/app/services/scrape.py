@@ -1,6 +1,6 @@
 from app.scraper.historic import HistoricScraper
 from app.db.models import FileType
-from datetime import date
+import pandas as pd
 
 
 def historic_scrape():
@@ -14,17 +14,8 @@ def historic_scrape():
             scraper.run()
 
 
-def generate_quarters(since:int=2015):
-    y = since
-    q = 0
+def generate_quarters(start="2015Q1"):
+    end = pd.Period.now(freq='Q') - 1
 
-    today = date.today()
-    end_year = today.year
-    end_quarter = (today.month - 1) // 3 + 1
-
-    while not (y == end_year and q == end_quarter):
-        q += 1
-        if q > 4:
-            y += 1
-            q = 1
-        yield y, q
+    for period in pd.period_range(start=start, end=end, freq='Q'):
+        yield period.year, period.quarter
