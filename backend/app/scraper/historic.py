@@ -110,7 +110,7 @@ class HistoricScraper:
 
         if file.loaded:
             logger.info(f"Already loaded, skipping {url}")
-            return
+            return False
 
         file_obj = self.download_tar(url)
 
@@ -152,6 +152,7 @@ class HistoricScraper:
 
         gc.collect()
         logger.info(f"Finished loading {url}")
+        return True
 
     def vacuum(self):
         conn = db.engine.connect().execution_options(isolation_level='AUTOCOMMIT')
