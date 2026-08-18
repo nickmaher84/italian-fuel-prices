@@ -4,7 +4,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
 import app.db.models as m
-from app.services.scrape import historic_scrape
+from app.tasks import historic_scrape_task
 from app.services.prices import prices_daily_query
 from app.core import db
 
@@ -114,8 +114,8 @@ class AdminView(AdminIndexView):
     @expose("/scrape", methods=["POST"])
     def scrape(self):
         try:
-            historic_scrape()
-            flash("Scrape successful", category="success")
+            historic_scrape_task.delay()
+            flash("Scrape queued - see Job Runs for progress", category="success")
         except Exception as e:
             flash(str(e), "error")
 
