@@ -22,6 +22,10 @@ class FileModelView(ReadOnlyModelView):
     column_filters = ["file_type", "extension", "filename"]
 
 
+class StationModelView(ReadOnlyModelView):
+    column_filters = ["station_id", "extraction_date", "comune", "province_code", "brand_name", "operator_name"]
+
+
 class StationChangeModelView(ReadOnlyModelView):
     column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "comune", "province_code", "brand_name", "operator_name"]
 
@@ -33,7 +37,7 @@ class AdminView(AdminIndexView):
     @expose("/")
     def index(self):
         files = m.File.query.count()
-        stations = m.StationChange.query.count()
+        stations = m.Station.query.count()
         prices = approx_count(m.PriceChange)
 
         return self.render(
