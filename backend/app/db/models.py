@@ -4,7 +4,7 @@ import uuid
 import re
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index, MetaData, Table, Column, String, Integer, Boolean, Numeric, Date, DateTime, LargeBinary
 
 from app.core import db
 
@@ -43,6 +43,22 @@ class File(db.Model):
         return None
 
 
+class Station(db.Model):
+    station_id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=False)
+    station_name: Mapped[str] = mapped_column(db.String(100), nullable=True)
+    station_type: Mapped[str] = mapped_column(db.String(20))
+    operator_name: Mapped[str] = mapped_column(db.String(255), nullable=True)
+    brand_name: Mapped[str] = mapped_column(db.String(50), nullable=True)
+    address: Mapped[str] = mapped_column(db.String(255), nullable=True)
+    comune: Mapped[str] = mapped_column(db.String(50), nullable=True)
+    province_code: Mapped[str] = mapped_column(db.String(2), nullable=True)
+    latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
+    longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
+
+    extraction_date: Mapped[date] = mapped_column()
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+
+
 class StationChange(db.Model):
     station_hash: Mapped[bytes] = mapped_column(db.LargeBinary(16), primary_key=True)
     station_id: Mapped[int] = mapped_column(db.Integer)
@@ -74,3 +90,24 @@ class PriceChange(db.Model):
     max_extraction_date: Mapped[date] = mapped_column()
     first_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
     last_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+
+    __table_args__ = (
+        Index(
+            'idx_price_change_lookup',
+            'station_id', 'fuel_description', 'self_service', 'entry_date',
+        ),
+    )
+
+
+_prices_daily_metadata = MetaData()
+prices_daily = Table(
+    'prices_daily',
+    _prices_daily_metadata,
+    Column('price_date', Date),
+    Column('station_id', Integer),
+    Column('fuel_description', String(50)),
+    Column('self_service', Boolean),
+    Column('price', Numeric(9, 3)),
+    Column('entry_date', DateTime),
+    Column('price_hash', LargeBinary(16)),
+)
