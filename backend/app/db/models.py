@@ -4,7 +4,7 @@ import uuid
 import re
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index, MetaData, Table, Column, String, Integer, Boolean, Numeric, Date, DateTime
 
 from app.core import db
 
@@ -90,3 +90,24 @@ class PriceChange(db.Model):
     max_extraction_date: Mapped[date] = mapped_column()
     first_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
     last_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+
+    __table_args__ = (
+        Index(
+            'idx_price_change_lookup',
+            'station_id', 'fuel_description', 'self_service', 'entry_date',
+        ),
+    )
+
+
+_prices_daily_metadata = MetaData()
+prices_daily = Table(
+    'prices_daily',
+    _prices_daily_metadata,
+    Column('price_date', Date),
+    Column('station_id', Integer),
+    Column('fuel_description', String(50)),
+    Column('self_service', Boolean),
+    Column('price', Numeric(9, 3)),
+    Column('entry_date', DateTime),
+    Column('price_hash', String(32)),
+)
