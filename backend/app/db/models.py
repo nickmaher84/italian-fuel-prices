@@ -4,7 +4,7 @@ import uuid
 import re
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Index, ForeignKey, ForeignKeyConstraint
+from sqlalchemy import ForeignKey
 
 from app.core import db
 
@@ -43,8 +43,8 @@ class File(db.Model):
         return None
 
 
-class StationHistory(db.Model):
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+class StationChange(db.Model):
+    station_hash: Mapped[bytes] = mapped_column(db.LargeBinary(16), primary_key=True)
     station_id: Mapped[int] = mapped_column(db.Integer)
     station_name: Mapped[str] = mapped_column(db.String(100), nullable=True)
     station_type: Mapped[str] = mapped_column(db.String(20))
@@ -55,42 +55,22 @@ class StationHistory(db.Model):
     province_code: Mapped[str] = mapped_column(db.String(2), nullable=True)
     latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
     longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
-    extraction_date: Mapped[date] = mapped_column(primary_key=True)
-    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
-    __table_args__ = (
-        ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_station_history_file_id'),
-        Index('idx_station_history_file_id', 'file_id'),
-        Index('idx_station_history_extraction_date', 'extraction_date'),
-        {'info': {'partition_by': 'RANGE (extraction_date)'}},
-    )
+    min_extraction_date: Mapped[date] = mapped_column()
+    max_extraction_date: Mapped[date] = mapped_column()
+    first_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+    last_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
 
 
-class PriceHistory(db.Model):
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+class PriceChange(db.Model):
+    price_hash: Mapped[bytes] = mapped_column(db.LargeBinary(16), primary_key=True)
     station_id: Mapped[int] = mapped_column(db.Integer)
     fuel_description: Mapped[str] = mapped_column(db.String(50))
     self_service: Mapped[bool] = mapped_column(db.Boolean)
-    price: Mapped[float] = mapped_column(db.Numeric(9,3))
-    entry_date: Mapped[datetime | None] = mapped_column(db.DateTime, nullable=False)
-    extraction_date: Mapped[date | None] = mapped_column(primary_key=True)
-    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+    price: Mapped[float] = mapped_column(db.Numeric(9, 3))
+    entry_date: Mapped[datetime] = mapped_column(db.DateTime)
 
-    __table_args__ = (
-        ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_price_history_file_id'),
-        Index('idx_price_history_file_id', 'file_id'),
-        Index('idx_price_history_extraction_date', 'extraction_date'),
-        {'info': {'partition_by': 'RANGE (extraction_date)'}},
-    )
-
-
-class ParserError(db.Model):
-    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'), primary_key=True)
-    line_number: Mapped[int] = mapped_column(db.Integer, primary_key=True)
-    line: Mapped[str] = mapped_column(db.Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
-
-    __table_args__ = (
-        ForeignKeyConstraint(['file_id'], ['file.file_id'], name='fk_parser_error_file_id'),
-        Index('idx_parser_error_file_id', 'file_id'),
-    )
+    min_extraction_date: Mapped[date] = mapped_column()
+    max_extraction_date: Mapped[date] = mapped_column()
+    first_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+    last_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
