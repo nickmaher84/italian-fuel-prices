@@ -148,8 +148,17 @@ class HistoricScraper:
         self.db.commit()
         self.db.expunge_all()
 
+        self.vacuum()
+
         gc.collect()
         logger.info(f"Finished loading {url}")
+
+    def vacuum(self):
+        conn = db.engine.connect().execution_options(isolation_level='AUTOCOMMIT')
+        try:
+            conn.execute(db.text(f'VACUUM ANALYZE {self.model.__tablename__}'))
+        finally:
+            conn.close()
 
     def download_tar(self, url:str):
         logger.info(f"Downloading {url}")
