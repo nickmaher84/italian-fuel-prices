@@ -43,6 +43,22 @@ class File(db.Model):
         return None
 
 
+class Station(db.Model):
+    station_id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=False)
+    station_name: Mapped[str] = mapped_column(db.String(100), nullable=True)
+    station_type: Mapped[str] = mapped_column(db.String(20))
+    operator_name: Mapped[str] = mapped_column(db.String(255), nullable=True)
+    brand_name: Mapped[str] = mapped_column(db.String(50), nullable=True)
+    address: Mapped[str] = mapped_column(db.String(255), nullable=True)
+    comune: Mapped[str] = mapped_column(db.String(50), nullable=True)
+    province_code: Mapped[str] = mapped_column(db.String(2), nullable=True)
+    latitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
+    longitude: Mapped[float] = mapped_column(db.Float(), nullable=True)
+
+    extraction_date: Mapped[date] = mapped_column()
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+
+
 class StationChange(db.Model):
     station_hash: Mapped[bytes] = mapped_column(db.LargeBinary(16), primary_key=True)
     station_id: Mapped[int] = mapped_column(db.Integer)
