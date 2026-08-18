@@ -66,5 +66,8 @@ class StationSync:
             station.extraction_date = record.max_extraction_date
             station.file_id = record.last_file_id
 
+            if station.comune:
+                station.comune = station.comune.upper()
+
         self.session.commit()
         logger.info(f"Synced {len(current)} stations")
