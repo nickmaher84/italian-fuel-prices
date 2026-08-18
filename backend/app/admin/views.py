@@ -18,37 +18,23 @@ class ReadOnlyModelView(StandardModelView):
     can_delete = False
 
 
-class FileModelView(StandardModelView):
-    can_create = False
-    can_edit = False
+class FileModelView(ReadOnlyModelView):
     column_filters = ["file_type", "extension", "filename"]
 
-    def delete_model(self, model):
-        try:
-            file_id = model.file_id
-            m.StationHistory.query.filter_by(file_id=file_id).delete()
-            m.PriceHistory.query.filter_by(file_id=file_id).delete()
-            db.session.delete(model)
-            db.session.commit()
-            return True
-        except Exception as e:
-            db.session.rollback()
-            raise
+
+class StationChangeModelView(ReadOnlyModelView):
+    column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "comune", "province_code", "brand_name", "operator_name"]
 
 
-class StationHistoryModelView(ReadOnlyModelView):
-    column_filters = ["station_id", "extraction_date", "comune", "province_code", "brand_name", "operator_name"]
-
-
-class PriceHistoryModelView(ReadOnlyModelView):
-    column_filters = ["station_id", "extraction_date", "fuel_description", "self_service"]
+class PriceChangeModelView(ReadOnlyModelView):
+    column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "fuel_description", "self_service"]
 
 class AdminView(AdminIndexView):
     @expose("/")
     def index(self):
         files = m.File.query.count()
-        stations = m.StationHistory.query.count()
-        prices = m.PriceHistory.query.count()
+        stations = m.StationChange.query.count()
+        prices = m.PriceChange.query.count()
         return self.render(
             "index.html",
             files=files,
