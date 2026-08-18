@@ -27,3 +27,5 @@ class FlaskTask(celery.Task):
 
 
 celery.Task = FlaskTask
+
+import app.jobs  # noqa: E402  (registers signal handlers as a side effect of import)

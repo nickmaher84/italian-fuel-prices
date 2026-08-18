@@ -38,6 +38,11 @@ class PriceChangeModelView(ReadOnlyModelView):
     column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "fuel_description", "self_service"]
 
 
+class JobRunModelView(ReadOnlyModelView):
+    column_default_sort = ("started", True)
+    column_filters = ["task_name", "status", "started"]
+
+
 class PricesDailyView(BaseView):
     MAX_PRICES_DAILY_RANGE = timedelta(days=31)
     MIN_START_DATE = date(2015, 1, 1)
