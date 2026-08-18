@@ -5,8 +5,8 @@ from flask_admin.theme import Bootstrap4Theme
 from app.admin.views import (
     FileModelView,
     AdminView,
-    StationHistoryModelView,
-    PriceHistoryModelView,
+    StationChangeModelView,
+    PriceChangeModelView,
 )
 from app.core import db
 import app.db.models as m
@@ -24,7 +24,7 @@ def init_admin(app):
         index_view=AdminView(),
     )
     admin.add_view(FileModelView(m.File, db.session))
-    admin.add_view(StationHistoryModelView(m.StationHistory, db.session))
-    admin.add_view(PriceHistoryModelView(m.PriceHistory, db.session))
+    admin.add_view(StationChangeModelView(m.StationChange, db.session))
+    admin.add_view(PriceChangeModelView(m.PriceChange, db.session))
 
     return admin

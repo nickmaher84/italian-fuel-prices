@@ -6,9 +6,10 @@ import gc
 from io import BytesIO
 from datetime import datetime
 from html import unescape
+from hashlib import md5
 
 from app.core import db
-from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df, save_errors
+from app.services.ingestion import get_or_create_file, get_or_create_member, ingest_df
 from app.db.models import FileType
 
 import logging
@@ -84,14 +85,23 @@ class HistoricScraper:
 
     @property
     def model(self):
-        from app.db.models import PriceHistory, StationHistory
+        from app.db.models import PriceChange, StationChange
 
         model_map = {
-            FileType.PRICES: PriceHistory,
-            FileType.STATIONS: StationHistory,
+            FileType.PRICES: PriceChange,
+            FileType.STATIONS: StationChange,
         }
 
         return model_map[self.file_type]
+
+    @property
+    def hash_column(self):
+        hash_column_map = {
+            FileType.PRICES: "price_hash",
+            FileType.STATIONS: "station_hash",
+        }
+
+        return hash_column_map[self.file_type]
 
     def run(self):
         url = f"{self.site}/categorized/{self.file_type.value}/{self.year}/{self.year}_{self.quarter}_tr.tar.gz"
@@ -120,16 +130,13 @@ class HistoricScraper:
                 extract = t.extractfile(member)
 
                 if member.size:
-                    records, errors = self.parse_csv(extract)
+                    records = self.parse_csv(extract)
                     if records:
                         df = self.create_df(records)
-                        df["file_id"] = m.file_id
                         if df["extraction_date"].isna().all():
                             df["extraction_date"] = m.file_date()
                         ingest_df(session=self.db, file=m, model=self.model, df=df)
                         del df, records
-
-                    save_errors(self.db, m, errors)
 
                 m.loaded = datetime.now()
                 self.db.add(m)
@@ -140,9 +147,18 @@ class HistoricScraper:
         self.db.add(file)
         self.db.commit()
         self.db.expunge_all()
-        
+
+        self.vacuum()
+
         gc.collect()
         logger.info(f"Finished loading {url}")
+
+    def vacuum(self):
+        conn = db.engine.connect().execution_options(isolation_level='AUTOCOMMIT')
+        try:
+            conn.execute(db.text(f'VACUUM ANALYZE {self.model.__tablename__}'))
+        finally:
+            conn.close()
 
     def download_tar(self, url:str):
         logger.info(f"Downloading {url}")
@@ -160,10 +176,9 @@ class HistoricScraper:
         extraction_date = None
         header = None
         delimiter = ";"
-        columns = []
 
+        columns = []
         records = []
-        errors = []
 
         for idx, line in enumerate(lines, 1):
             if line.startswith('Estrazione del'):
@@ -179,22 +194,18 @@ class HistoricScraper:
                 columns = header.split(delimiter)
 
             elif line.strip():
+                line_hash = md5(line.encode('utf-8')).hexdigest()
                 fields = preprocess_line(unescape(line).split(delimiter), delimiter, len(columns))
 
-                if len(fields) != len(columns):
-                    logger.error(f"Row {idx} has {len(fields)} fields but expected {len(columns)}: {line}")
-                    errors.append([idx, line])
-                    continue
-
                 record = dict(zip(columns, fields))
+                record[self.hash_column] = line_hash
                 record['extraction_date'] = extraction_date
-                record['id'] = uuid.uuid4().hex
                 records.append(record)
 
         if header is None:
             logger.error("No header row found. Skipping.")
 
-        return records, errors
+        return records
 
     def create_df(self, records:list[dict]):
         df = pd.DataFrame.from_records(records)

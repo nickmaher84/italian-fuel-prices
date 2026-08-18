@@ -1,60 +1,15 @@
 import logging
 import math
-from datetime import datetime, date
+from datetime import datetime
 from werkzeug.http import parse_date
 from pathlib import Path
 
+from sqlalchemy import inspect
+
 from app.core import db
-from app.db.models import File, FileType, ParserError
+from app.db.models import File, FileType
 
 logger = logging.getLogger(__name__)
-
-
-def ensure_partition_exists(session, table_name: str, extraction_date: date):
-    """Create partition for extraction_date quarter if it doesn't exist.
-
-    Only uses raw SQL for DDL (partition creation), which SQLAlchemy ORM cannot express.
-    """
-    if not extraction_date:
-        return
-
-    year = extraction_date.year
-    month = extraction_date.month
-    quarter = (month - 1) // 3 + 1
-    schema_name = "data_partitions"
-    partition_name = f"{table_name}_{year}q{quarter}"
-
-    # Calculate partition boundaries
-    start_month = (quarter - 1) * 3 + 1
-    if quarter == 4:
-        end_year = year + 1
-        end_month = 1
-    else:
-        end_year = year
-        end_month = start_month + 3
-
-    start_date = f"{year:04d}-{start_month:02d}-01"
-    end_date = f"{end_year:04d}-{end_month:02d}-01"
-
-    conn = session.connection()
-
-    # Check if partition exists using raw SQL (unavoidable for DDL introspection)
-    check_sql = db.text(f"""
-        SELECT EXISTS (
-            SELECT 1 FROM information_schema.tables
-            WHERE table_name = '{partition_name}'
-            AND table_schema = '{schema_name}'
-        )
-    """)
-    exists = conn.execute(check_sql).scalar()
-
-    if not exists:
-        logger.info(f"Creating partition {partition_name} for {year}Q{quarter}")
-        create_sql = db.text(f"""
-            CREATE TABLE {schema_name}.{partition_name} PARTITION OF {table_name}
-                FOR VALUES FROM ('{start_date}') TO ('{end_date}')
-        """)
-        conn.execute(create_sql)
 
 
 def get_extension(filename):
@@ -128,46 +83,68 @@ def get_or_create_member(session, member):
 
 
 def ingest_df(session, file, model, df):
-    ensure_partition_exists(session, model.__tablename__, file.file_date())
-
-    session.query(model).filter(model.file_id == file.file_id).delete()
+    hash_column = inspect(model).primary_key[0].name
+    file_id = file.file_id
 
     try:
         rows = df.to_dict(orient='records')
         rows = [{k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in row.items()} for row in rows]
-        session.bulk_insert_mappings(model, rows)
+
+        records = {}
+        for row in rows:
+            key = row[hash_column]
+
+            extraction_date = row.pop('extraction_date')
+            if hasattr(extraction_date, 'date'):
+                extraction_date = extraction_date.date()
+            row['min_extraction_date'] = extraction_date
+            row['max_extraction_date'] = extraction_date
+            row['first_file_id'] = file_id
+            row['last_file_id'] = file_id
+
+            existing = records.get(key)
+
+            if existing is None:
+                records[key] = row
+                continue
+
+            if row['min_extraction_date'] < existing['min_extraction_date']:
+                existing['min_extraction_date'] = row['min_extraction_date']
+                existing['first_file_id'] = row['first_file_id']
+
+            if row['max_extraction_date'] > existing['max_extraction_date']:
+                existing['max_extraction_date'] = row['max_extraction_date']
+                existing['last_file_id'] = row['last_file_id']
+
+        pk_attr = getattr(model, hash_column)
+        existing_instances = {
+            getattr(instance, hash_column): instance
+            for instance in session.scalars(
+                db.select(model).where(pk_attr.in_(records.keys()))
+            )
+        }
+
+        for key, row in records.items():
+            instance = existing_instances.get(key)
+
+            if instance is None:
+                instance = model(**row)
+                session.add(instance)
+
+            elif row['min_extraction_date'] < instance.min_extraction_date:
+                instance.min_extraction_date = row['min_extraction_date']
+                instance.first_file_id = row['first_file_id']
+
+            elif row['max_extraction_date'] > instance.max_extraction_date:
+                instance.max_extraction_date = row['max_extraction_date']
+                instance.last_file_id = row['last_file_id']
 
         file.loaded = datetime.now()
         session.add(file)
         session.commit()
 
-        logger.info(f"Inserted {len(df)} rows into {model.__tablename__}")
+        logger.info(f"Merged {len(records)} rows into {model.__tablename__}")
 
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert into {model.__tablename__}: {e}")
-        # raise
-
-
-def save_errors(session, file, error_records):
-    session.query(ParserError).filter(ParserError.file_id == file.file_id).delete()
-
-    try:
-        for idx, line in error_records:
-            record = ParserError(
-                file_id=file.file_id,
-                line_number=idx,
-                line=line,
-            )
-            session.add(record)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Failed to insert into {ParserError.__tablename__}: {e}")
-        raise
-
-    file.loaded = datetime.now()
-    session.add(file)
-    session.commit()
-
-    logger.info(f"Inserted {len(error_records)} rows into {ParserError.__tablename__}")
