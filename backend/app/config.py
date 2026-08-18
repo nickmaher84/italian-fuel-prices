@@ -7,6 +7,9 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'development'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://localhost/fuel_prices'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'executemany_mode': 'values_plus_batch',
+    }
 
 
 LOGGING = {
