@@ -116,8 +116,16 @@ def ingest_df(session, file, model, df):
                 existing['max_extraction_date'] = row['max_extraction_date']
                 existing['last_file_id'] = row['last_file_id']
 
+        pk_attr = getattr(model, hash_column)
+        existing_instances = {
+            getattr(instance, hash_column): instance
+            for instance in session.scalars(
+                db.select(model).where(pk_attr.in_(records.keys()))
+            )
+        }
+
         for key, row in records.items():
-            instance = session.get(model, key)
+            instance = existing_instances.get(key)
 
             if instance is None:
                 instance = model(**row)
