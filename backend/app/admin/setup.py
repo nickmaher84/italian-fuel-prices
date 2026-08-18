@@ -8,6 +8,7 @@ from app.admin.views import (
     StationModelView,
     StationChangeModelView,
     PriceChangeModelView,
+    PricesDailyView,
 )
 from app.core import db
 import app.db.models as m
@@ -27,6 +28,7 @@ def init_admin(app):
     admin.add_view(FileModelView(m.File, db.session))
     admin.add_view(StationModelView(m.Station, db.session, name="Stations", category="Stations"))
     admin.add_view(StationChangeModelView(m.StationChange, db.session, name="Station Changes", category="Stations"))
-    admin.add_view(PriceChangeModelView(m.PriceChange, db.session))
+    admin.add_view(PricesDailyView(name="Daily Prices", endpoint="prices-daily", category="Prices"))
+    admin.add_view(PriceChangeModelView(m.PriceChange, db.session, name="Price Changes", category="Prices"))
 
     return admin
