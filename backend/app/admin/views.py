@@ -34,7 +34,8 @@ class AdminView(AdminIndexView):
     def index(self):
         files = m.File.query.count()
         stations = m.StationChange.query.count()
-        prices = m.PriceChange.query.count()
+        prices = approx_count(m.PriceChange)
+
         return self.render(
             "index.html",
             files=files,
@@ -51,3 +52,8 @@ class AdminView(AdminIndexView):
             flash(str(e), "error")
 
         return redirect(url_for(".index"))
+
+
+def approx_count(model: db.Model):
+    query = db.text("SELECT reltuples::bigint FROM pg_class WHERE relname = :table_name")
+    return db.session.execute(query, {"table_name": model.__tablename__}).scalar()
