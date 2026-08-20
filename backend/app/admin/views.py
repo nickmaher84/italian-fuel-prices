@@ -1,12 +1,16 @@
+import re
 from datetime import date, datetime, timedelta
 
 from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
 import app.db.models as m
-from app.services.scrape import historic_scrape
+from app.db.models import FileType
+from app.tasks import historic_scrape_task, scrape_range_task
 from app.services.prices import prices_daily_query
 from app.core import db
+
+QUARTER_RE = re.compile(r'^\d{4}Q[1-4]$')
 
 
 
@@ -36,6 +40,11 @@ class StationChangeModelView(ReadOnlyModelView):
 
 class PriceChangeModelView(ReadOnlyModelView):
     column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "fuel_description", "self_service"]
+
+
+class JobRunModelView(ReadOnlyModelView):
+    column_default_sort = ("started", True)
+    column_filters = ["task_name", "status", "started"]
 
 
 class PricesDailyView(BaseView):
@@ -92,6 +101,27 @@ class PricesDailyView(BaseView):
         )
 
 
+class ScrapeRangeView(BaseView):
+    @expose("/", methods=["GET", "POST"])
+    def index(self):
+        if request.method == "POST":
+            start = request.form.get("start_quarter", "").strip().upper()
+            end = request.form.get("end_quarter", "").strip().upper()
+            file_types = request.form.getlist("file_types")
+
+            if not QUARTER_RE.match(start) or not QUARTER_RE.match(end):
+                flash("Please enter quarters in the form YYYYQN, e.g. 2017Q2.", "error")
+            elif end < start:
+                flash("End quarter must not be before start quarter.", "error")
+            else:
+                scrape_range_task.delay(start, end, file_types or None)
+                flash(f"Scrape queued for {start} to {end} - see Job Runs for progress", "success")
+
+            return redirect(url_for(".index"))
+
+        return self.render("scrape_range.html", file_types=FileType)
+
+
 class AdminView(AdminIndexView):
     @expose("/")
     def index(self):
@@ -109,8 +139,8 @@ class AdminView(AdminIndexView):
     @expose("/scrape", methods=["POST"])
     def scrape(self):
         try:
-            historic_scrape()
-            flash("Scrape successful", category="success")
+            historic_scrape_task.delay()
+            flash("Scrape queued - see Job Runs for progress", category="success")
         except Exception as e:
             flash(str(e), "error")
 

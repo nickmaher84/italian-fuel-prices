@@ -43,6 +43,17 @@ class File(db.Model):
         return None
 
 
+class JobRun(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[str] = mapped_column(db.String(155), unique=True)
+    task_name: Mapped[str] = mapped_column(db.String(255))
+    args: Mapped[str | None] = mapped_column(db.Text, nullable=True)
+    status: Mapped[str] = mapped_column(db.String(20), default='PENDING')
+    started: Mapped[datetime | None]
+    finished: Mapped[datetime | None]
+    error: Mapped[str | None] = mapped_column(db.Text, nullable=True)
+
+
 class Station(db.Model):
     station_id: Mapped[int] = mapped_column(db.Integer, primary_key=True, autoincrement=False)
     station_name: Mapped[str] = mapped_column(db.String(100), nullable=True)
