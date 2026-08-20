@@ -51,5 +51,82 @@
       </div>
     </div>
   </div>
+
+  <div class="row" style="margin-top: 24px;">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header"><strong>Scrape Range</strong></div>
+        <div class="card-body" style="overflow-x: auto;">
+          <p class="text-muted">Queue a scrape for a specific quarter range, optionally limited to certain file types. Useful for testing, or backfilling a gap, without running the full history.</p>
+          <form method="post" action="{{ url_for('admin.scrape_range') }}" class="form-inline" style="gap: 8px;">
+            <label for="start_quarter">Start quarter</label>
+            <select id="start_quarter" name="start_quarter" class="form-control">
+              {% for quarter in quarters %}
+              <option value="{{ quarter }}" {% if quarter == quarters[-1] %}selected{% endif %}>{{ quarter }}</option>
+              {% endfor %}
+            </select>
+            <label for="end_quarter">End quarter</label>
+            <select id="end_quarter" name="end_quarter" class="form-control">
+              {% for quarter in quarters %}
+              <option value="{{ quarter }}" {% if quarter == quarters[0] %}selected{% endif %}>{{ quarter }}</option>
+              {% endfor %}
+            </select>
+
+            <span style="margin-left: 12px;">File types:</span>
+            {% for file_type in file_types %}
+            <div class="form-check" style="margin-left: 8px;">
+              <input type="checkbox" class="form-check-input" id="ft_{{ file_type.name }}" name="file_types" value="{{ file_type.value }}" checked>
+              <label class="form-check-label" for="ft_{{ file_type.name }}">{{ file_type.name.title() }}</label>
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary" style="margin-left: 12px;">Queue scrape</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top: 24px;">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header"><strong>Queue</strong></div>
+        <div class="card-body" style="overflow-x: auto;">
+          <p class="text-muted">
+            Live snapshot from the Celery worker (<code>control.inspect()</code>) - not historical, refresh the page to update.
+            {% if not worker_online %}
+              <span class="text-danger">No worker responded - it may be busy, restarting, or down.</span>
+            {% endif %}
+          </p>
+          {% if queue_rows %}
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Task</th>
+                <th>Args</th>
+                <th>Worker</th>
+                <th>ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in queue_rows %}
+              <tr>
+                <td>{{ row.kind }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.args }}</td>
+                <td>{{ row.worker }}</td>
+                <td><code>{{ row.id }}</code></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% elif worker_online %}
+          <p>Worker is online and idle - nothing active, reserved, or scheduled.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

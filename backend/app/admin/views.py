@@ -2,8 +2,16 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
 import app.db.models as m
-from app.services.scrape import historic_scrape
+from app.db.models import FileType
+from app.tasks import historic_scrape_task, scrape_range_task, DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
+from app.celery_app import celery
 from app.core import db
+
+
+def quarter_choices() -> list[str]:
+    quarters = [f"{year}Q{quarter}" for year, quarter in generate_quarters(start=DEFAULT_START_QUARTER, end=latest_complete_quarter())]
+    quarters.reverse()
+    return quarters
 
 
 
@@ -36,28 +44,89 @@ class PriceChangeModelView(ReadOnlyModelView):
 
 
 class AdminView(AdminIndexView):
+    INSPECT_TIMEOUT = 2.0
+
     @expose("/")
     def index(self):
         files = m.File.query.count()
         stations = m.Station.query.count()
         prices = approx_count(m.PriceChange)
 
+        queue_rows, worker_online = self._queue_snapshot()
+
         return self.render(
             "index.html",
             files=files,
             stations=stations,
             prices=prices,
+            file_types=FileType,
+            quarters=quarter_choices(),
+            queue_rows=queue_rows,
+            worker_online=worker_online,
         )
 
     @expose("/scrape", methods=["POST"])
     def scrape(self):
         try:
-            historic_scrape()
-            flash("Scrape successful", category="success")
+            historic_scrape_task.delay()
+            flash("Historical backfill queued", category="success")
         except Exception as e:
             flash(str(e), "error")
 
         return redirect(url_for(".index"))
+
+    @expose("/scrape-range", methods=["POST"])
+    def scrape_range(self):
+        start = request.form.get("start_quarter", "").strip().upper()
+        end = request.form.get("end_quarter", "").strip().upper()
+        file_types = request.form.getlist("file_types")
+        choices = quarter_choices()
+
+        if start not in choices or end not in choices:
+            flash("Please select valid start and end quarters.", "error")
+        elif end < start:
+            flash("End quarter must not be before start quarter.", "error")
+        else:
+            scrape_range_task.delay(start, end, file_types or None)
+            flash(f"Scrape queued for {start} to {end}", "success")
+
+        return redirect(url_for(".index"))
+
+    def _queue_snapshot(self):
+        inspect = celery.control.inspect(timeout=self.INSPECT_TIMEOUT)
+        active = inspect.active() or {}
+        reserved = inspect.reserved() or {}
+        scheduled = inspect.scheduled() or {}
+        worker_online = bool(active or reserved or scheduled or inspect.ping())
+
+        def flatten(by_worker, kind):
+            rows = []
+            for worker, tasks in by_worker.items():
+                for t in tasks:
+                    request = t.get("request", t)
+                    rows.append({
+                        "worker": worker,
+                        "kind": kind,
+                        "name": request.get("name"),
+                        "args": request.get("args"),
+                        "id": request.get("id"),
+                    })
+            return rows
+
+        rows = flatten(active, "active") + flatten(reserved, "reserved") + flatten(scheduled, "scheduled")
+
+        # A message that's been redelivered without being acked can show up
+        # repeatedly under the same id - dedupe so the page reflects distinct
+        # tasks, not delivery attempts.
+        seen = set()
+        deduped = []
+        for row in rows:
+            key = (row["kind"], row["id"])
+            if key not in seen:
+                seen.add(key)
+                deduped.append(row)
+
+        return deduped, worker_online
 
 
 def approx_count(model: db.Model):

@@ -103,8 +103,26 @@ class HistoricScraper:
 
         return hash_column_map[self.file_type]
 
+    @classmethod
+    def url_for(cls, file_type: FileType, year: int, quarter: int) -> str:
+        return f"{cls.site}/categorized/{file_type.value}/{year}/{year}_{quarter}_tr.tar.gz"
+
+    def is_available(self) -> bool:
+        url = self.url_for(self.file_type, self.year, self.quarter)
+        try:
+            response = self.conn.head(url)
+        except requests.RequestException as e:
+            logger.warning(f"Availability check failed for {url}: {e}")
+            return False
+
+        if response.status_code != 200:
+            logger.info(f"Not yet available ({response.status_code}): {url}")
+            return False
+
+        return True
+
     def run(self):
-        url = f"{self.site}/categorized/{self.file_type.value}/{self.year}/{self.year}_{self.quarter}_tr.tar.gz"
+        url = self.url_for(self.file_type, self.year, self.quarter)
 
         file = get_or_create_file(self.db, self.conn, url=url)
 

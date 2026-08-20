@@ -4,7 +4,7 @@ services:
   db:
     image: postgres:15
     restart: unless-stopped
-    command: postgres -c shared_buffers=2GB
+    command: postgres -c shared_buffers=1GB
     environment:
       POSTGRES_USER:     ${DATABASE_USERNAME:-}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-}
@@ -15,5 +15,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
     shm_size: 1gb
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   postgres_data:
+  redis_data:
