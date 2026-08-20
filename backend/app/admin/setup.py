@@ -10,6 +10,7 @@ from app.admin.views import (
     PriceChangeModelView,
     PricesDailyView,
     JobRunModelView,
+    ScrapeRangeView,
 )
 from app.core import db
 import app.db.models as m
@@ -32,5 +33,6 @@ def init_admin(app):
     admin.add_view(PricesDailyView(name="Daily Prices", endpoint="prices-daily", category="Prices"))
     admin.add_view(PriceChangeModelView(m.PriceChange, db.session, name="Price Changes", category="Prices"))
     admin.add_view(JobRunModelView(m.JobRun, db.session, name="Job Runs"))
+    admin.add_view(ScrapeRangeView(name="Scrape Range", endpoint="scrape-range"))
 
     return admin

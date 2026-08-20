@@ -7,6 +7,8 @@ from app.db.models import FileType
 from app.scraper.historic import HistoricScraper
 from app.services.station_sync import StationSync
 
+DEFAULT_START_QUARTER = pd.Period("2015Q1", freq='Q')
+
 
 @celery.task
 def scrape_quarter_task(file_type_value: str, year: int, quarter: int) -> bool:
@@ -26,9 +28,8 @@ def sync_stations_task(loaded: bool = True) -> None:
     StationSync(db.session).run()
 
 
-@celery.task
-def historic_scrape_task():
-    """Queue a chain covering every quarter/file-type, in order.
+def _build_scrape_chain(start: str | pd.Period = DEFAULT_START_QUARTER, end: str | pd.Period | None = None, file_types: list[str] | None = None):
+    """Build (but don't submit) a chain covering the given quarter range/file-types, in order.
 
     Chained so each step only starts once the previous one finishes - this
     keeps writes to station_change/price_change strictly sequential, which
@@ -39,20 +40,37 @@ def historic_scrape_task():
     HistoricScraper.run() already skips quarters that are fully loaded, so
     re-queuing this over already-loaded history is inexpensive.
     """
-    steps = []
+    types = [FileType(t) for t in file_types] if file_types else list(FileType)
 
-    for year, quarter in generate_quarters():
-        for file_type in FileType:
+    steps = []
+    for year, quarter in generate_quarters(start=start, end=end):
+        for file_type in types:
             steps.append(scrape_quarter_task.si(file_type.value, year, quarter))
 
             if file_type == FileType.STATIONS:
                 steps.append(sync_stations_task.s())
 
-    chain(*steps).apply_async()
+    return chain(*steps)
 
 
-def generate_quarters(start="2015Q1"):
-    end = pd.Period.now(freq='Q') - 1
+@celery.task
+def historic_scrape_task():
+    """Queue the full-history chain, from 2015Q1 up to the last complete quarter."""
+    _build_scrape_chain().apply_async()
+
+
+@celery.task
+def scrape_range_task(start: str, end: str, file_types: list[str] | None = None):
+    """Queue a chain for a specific quarter range, optionally limited to given file types.
+
+    For ad hoc/test runs - e.g. scrape_range_task.delay("2017Q2", "2017Q2", ["anagrafica_impianti_attivi"])
+    to load just stations for Q2 2017.
+    """
+    _build_scrape_chain(start=start, end=end, file_types=file_types).apply_async()
+
+
+def generate_quarters(start: str | pd.Period = DEFAULT_START_QUARTER, end: str | pd.Period | None = None):
+    end = pd.Period(end, freq='Q') if end else pd.Period.now(freq='Q') - 1
 
     for period in pd.period_range(start=start, end=end, freq='Q'):
         yield period.year, period.quarter
