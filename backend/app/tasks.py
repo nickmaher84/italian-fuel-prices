@@ -10,6 +10,10 @@ from app.services.station_sync import StationSync
 DEFAULT_START_QUARTER = pd.Period("2015Q1", freq='Q')
 
 
+def latest_complete_quarter() -> pd.Period:
+    return pd.Period.now(freq='Q') - 1
+
+
 @celery.task
 def scrape_quarter_task(file_type_value: str, year: int, quarter: int) -> bool:
     scraper = HistoricScraper(
@@ -70,7 +74,32 @@ def scrape_range_task(start: str, end: str, file_types: list[str] | None = None)
 
 
 def generate_quarters(start: str | pd.Period = DEFAULT_START_QUARTER, end: str | pd.Period | None = None):
-    end = pd.Period(end, freq='Q') if end else pd.Period.now(freq='Q') - 1
+    end = pd.Period(end, freq='Q') if end else latest_complete_quarter()
 
     for period in pd.period_range(start=start, end=end, freq='Q'):
         yield period.year, period.quarter
+
+
+@celery.task
+def poll_latest_quarter_task():
+    """Check whether the latest complete quarter's files have been published yet.
+
+    MIMIT doesn't publish a quarter's tar files right at quarter-end -
+    observed delays range from same-day to ~12 days, with quarter-end
+    (Q4/year-end) consistently the slowest at 8-9 days. Rather than guess a
+    per-quarter wait time, this runs on a daily schedule (see celery beat
+    config) and does a cheap HEAD-only availability check; whichever file
+    types are newly available get their own scrape+sync chain queued
+    immediately, so one slow file type doesn't hold up the other.
+    """
+    period = latest_complete_quarter()
+    year, quarter = period.year, period.quarter
+
+    available_types = [
+        file_type.value
+        for file_type in FileType
+        if HistoricScraper(file_type, year, quarter).is_available()
+    ]
+
+    if available_types:
+        _build_scrape_chain(start=period, end=period, file_types=available_types).apply_async()

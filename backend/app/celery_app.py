@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core import app as flask_app
 
@@ -17,6 +18,12 @@ celery.conf.update(
     # pass --concurrency=1 on the command line) is what actually keeps that
     # from happening again.
     worker_concurrency=1,
+    beat_schedule={
+        'poll-latest-quarter': {
+            'task': 'app.tasks.poll_latest_quarter_task',
+            'schedule': crontab(hour=6, minute=0),
+        },
+    },
 )
 
 
