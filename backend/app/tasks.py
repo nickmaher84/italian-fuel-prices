@@ -4,6 +4,7 @@ import redis
 from app.celery_app import celery
 from app.core import app as flask_app, db
 from app.db.models import FileType
+from app.scraper.daily import DailyScraper
 from app.scraper.historic import HistoricScraper
 from app.services.station_sync import StationSync
 
@@ -42,6 +43,16 @@ def generate_quarters(start: str | pd.Period = DEFAULT_START_QUARTER, end: str |
 
     for period in pd.period_range(start=start, end=end, freq='Q'):
         yield period.year, period.quarter
+
+
+@celery.task
+def scrape_daily_task():
+    for file_type in FileType:
+        loaded = DailyScraper(file_type).run()
+
+        if loaded and file_type == FileType.STATIONS:
+            if sync_stations_pending.set():
+                sync_stations_task.delay()
 
 
 @celery.task

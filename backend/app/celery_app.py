@@ -17,6 +17,10 @@ celery.conf.update(
             'task': 'app.tasks.poll_latest_quarter_task',
             'schedule': crontab(hour=6, minute=0),
         },
+        'scrape-daily-files': {
+            'task': 'app.tasks.scrape_daily_task',
+            'schedule': crontab(hour='9,21', minute=0),
+        },
     },
 )
 
