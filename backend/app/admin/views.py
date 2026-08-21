@@ -3,7 +3,7 @@ from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
 import app.db.models as m
 from app.db.models import FileType
-from app.tasks import historic_scrape_task, scrape_range_task, DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
+from app.tasks import historic_scrape_task, scrape_range_task, run_daily_scrape, DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
 from app.celery_app import celery
 from app.core import db
 
@@ -70,6 +70,16 @@ class AdminView(AdminIndexView):
         try:
             historic_scrape_task.delay()
             flash("Historical backfill queued", category="success")
+        except Exception as e:
+            flash(str(e), "error")
+
+        return redirect(url_for(".index"))
+
+    @expose("/scrape-daily", methods=["POST"])
+    def scrape_daily(self):
+        try:
+            run_daily_scrape()
+            flash("Daily scrape complete", category="success")
         except Exception as e:
             flash(str(e), "error")
 

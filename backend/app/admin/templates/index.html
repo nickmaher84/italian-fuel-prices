@@ -39,12 +39,23 @@
   </div>
 
   <div class="row" style="margin-top: 24px;">
-    <div class="col-md-12">
+    <div class="col-md-6">
       <div class="card">
-        <div class="card-header"><strong>Run Scraper</strong></div>
+        <div class="card-header"><strong>Run Historical Backfill</strong></div>
         <div class="card-body" style="overflow-x: auto;">
-          <p class="text-muted">Runs the scraper to find new data to load.</p>
+          <p class="text-muted">Queues the full 2015-to-present quarterly backfill via Celery. Returns immediately, but scraping will run in the background.</p>
           <form method="post" action="{{ url_for('admin.scrape') }}">
+            <button type="submit" class="btn btn-primary">Run</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><strong>Run Daily Scrape</strong></div>
+        <div class="card-body" style="overflow-x: auto;">
+          <p class="text-muted">Runs today's price/station files immediately, bypassing the Celery queue. This blocks the page until it finishes (usually a few minutes).</p>
+          <form method="post" action="{{ url_for('admin.scrape_daily') }}">
             <button type="submit" class="btn btn-primary">Run</button>
           </form>
         </div>
