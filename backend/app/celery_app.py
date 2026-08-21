@@ -11,6 +11,7 @@ celery = Celery(
 celery.conf.update(
     task_track_started=True,
     result_extended=True,
+    timezone='Europe/Rome',
     worker_concurrency=1,
     beat_schedule={
         'poll-latest-quarter': {
