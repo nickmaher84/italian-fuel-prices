@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta
 
 from collections import namedtuple
@@ -6,7 +7,14 @@ from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
 import app.db.models as m
 from app.db.models import FileType
-from app.tasks import historic_scrape_task, scrape_range_task, run_daily_scrape
+from app.tasks import (
+    historic_scrape_task,
+    scrape_range_task,
+    run_daily_scrape,
+    rebuild_mirror_task,
+    mirror_rebuild_pending,
+    mirror_rebuild_result,
+)
 from app.quarters import DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
 from app.services.mirror import Mirror
 from app.celery_app import celery
@@ -119,6 +127,14 @@ class AdminView(AdminIndexView):
 
         queue_rows, worker_online = self._queue_snapshot()
 
+        try:
+            rebuild_pending = mirror_rebuild_pending.get()
+            raw_result = mirror_rebuild_result.get()
+            rebuild_result = json.loads(raw_result) if raw_result else None
+        except Exception:
+            rebuild_pending = False
+            rebuild_result = None
+
         return self.render(
             "index.html",
             files=files,
@@ -128,6 +144,8 @@ class AdminView(AdminIndexView):
             quarters=quarter_choices(),
             queue_rows=queue_rows,
             worker_online=worker_online,
+            mirror_rebuild_pending=rebuild_pending,
+            mirror_rebuild_result=rebuild_result,
         )
 
     @expose("/scrape", methods=["POST"])
@@ -145,6 +163,19 @@ class AdminView(AdminIndexView):
         try:
             run_daily_scrape()
             flash("Daily scrape complete", category="success")
+        except Exception as e:
+            flash(str(e), "error")
+
+        return redirect(url_for(".index"))
+
+    @expose("/rebuild-mirror", methods=["POST"])
+    def rebuild_mirror(self):
+        try:
+            if mirror_rebuild_pending.set(ttl=3 * 60 * 60):
+                rebuild_mirror_task.delay()
+                flash("Mirror rebuild queued - runs in the background for ~1 hour.", "success")
+            else:
+                flash("A mirror rebuild is already queued or running.", "warning")
         except Exception as e:
             flash(str(e), "error")
 

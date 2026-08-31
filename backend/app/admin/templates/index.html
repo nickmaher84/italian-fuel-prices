@@ -101,6 +101,34 @@
   <div class="row" style="margin-top: 24px;">
     <div class="col-md-12">
       <div class="card">
+        <div class="card-header"><strong>Rebuild Analytics Mirror</strong></div>
+        <div class="card-body" style="overflow-x: auto;">
+          <p class="text-muted">Discards <code>mirror.duckdb</code> and rebuilds every table from Postgres via Celery. Runs for ~an hour in the background and holds the worker for its duration. The Prices (daily) page is unavailable while it runs.</p>
+          {% if mirror_rebuild_result %}
+          <div class="alert {{ 'alert-success' if mirror_rebuild_result.status == 'success' else 'alert-danger' }}" style="padding: 8px 12px;">
+            {% if mirror_rebuild_result.status == 'success' %}
+            Last rebuild succeeded &mdash; {{ mirror_rebuild_result.at }}.
+            {% else %}
+            Last rebuild <strong>failed</strong> &mdash; {{ mirror_rebuild_result.at or 'in progress' }}.
+            {% if mirror_rebuild_result.detail %}<br><code>{{ mirror_rebuild_result.detail }}</code>{% endif %}
+            {% endif %}
+          </div>
+          {% endif %}
+          {% if mirror_rebuild_pending %}
+          <button type="button" class="btn btn-secondary" disabled>Rebuild in progress&hellip;</button>
+          {% else %}
+          <form method="post" action="{{ url_for('admin.rebuild_mirror') }}" onsubmit="return confirm('Discard the current mirror and rebuild from Postgres? This takes about an hour.');">
+            <button type="submit" class="btn btn-warning">Rebuild</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top: 24px;">
+    <div class="col-md-12">
+      <div class="card">
         <div class="card-header"><strong>Queue</strong></div>
         <div class="card-body" style="overflow-x: auto;">
           <p class="text-muted">
