@@ -1,0 +1,59 @@
+idImpianto;descCarburante;isSelf;prezzo;dtComu;source;reason
+55164;Benzina;0;1.769;15/12/2022 17:42:31;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55206;Benzina;1;1.599;24/12/2022 20:03:31;28th;unchanged since 2022-12-24 20:03, before the 27th 08:01 snapshot
+55206;GPL;0;0.699;24/12/2022 20:03:31;28th;unchanged since 2022-12-24 20:03, before the 27th 08:01 snapshot
+55206;Gasolio;0;1.829;24/12/2022 20:03:31;28th;unchanged since 2022-12-24 20:03, before the 27th 08:01 snapshot
+55206;Gasolio;1;1.679;24/12/2022 20:03:31;28th;unchanged since 2022-12-24 20:03, before the 27th 08:01 snapshot
+55210;Benzina;0;1.844;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Benzina;1;1.624;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Blue Diesel;0;2.044;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Blue Diesel;1;1.824;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Blue Super;0;1.994;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Blue Super;1;1.774;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Gasolio;0;1.944;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55210;Gasolio;1;1.724;26/12/2022 00:28:07;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55212;Benzina;1;1.747;22/12/2022 15:27:50;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55212;Gasolio;1;1.857;22/12/2022 15:27:50;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55213;Benzina;0;1.638;23/12/2022 10:13:56;28th;unchanged since 2022-12-23 10:13, before the 27th 08:01 snapshot
+55213;Benzina;1;1.638;23/12/2022 10:13:56;28th;unchanged since 2022-12-23 10:13, before the 27th 08:01 snapshot
+55213;Gasolio;0;1.728;23/12/2022 10:13:56;28th;unchanged since 2022-12-23 10:13, before the 27th 08:01 snapshot
+55213;Gasolio;1;1.728;23/12/2022 10:13:56;28th;unchanged since 2022-12-23 10:13, before the 27th 08:01 snapshot
+55214;Benzina;1;1.529;22/12/2022 14:03:59;28th;unchanged since 2022-12-22 14:03, before the 27th 08:01 snapshot
+55214;Gasolio;1;1.619;22/12/2022 14:03:59;28th;unchanged since 2022-12-22 14:03, before the 27th 08:01 snapshot
+55215;Benzina;0;1.799;25/12/2022 11:05:43;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55215;Benzina;1;1.579;25/12/2022 11:05:43;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55215;Gasolio;0;1.899;25/12/2022 11:05:43;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55215;Gasolio;1;1.679;25/12/2022 11:05:43;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55216;Benzina;0;1.829;22/12/2022 13:19:22;28th;unchanged since 2022-12-22 13:19, before the 27th 08:01 snapshot
+55216;Benzina;1;1.619;22/12/2022 13:19:22;28th;unchanged since 2022-12-22 13:19, before the 27th 08:01 snapshot
+55216;Blue Super;0;1.979;22/12/2022 13:19:22;28th;unchanged since 2022-12-22 13:19, before the 27th 08:01 snapshot
+55216;Gasolio;0;1.899;22/12/2022 13:19:22;28th;unchanged since 2022-12-22 13:19, before the 27th 08:01 snapshot
+55216;Gasolio;1;1.689;22/12/2022 13:19:22;28th;unchanged since 2022-12-22 13:19, before the 27th 08:01 snapshot
+55220;Benzina;0;1.794;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55220;Benzina;1;1.574;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55220;Blue Diesel;0;1.964;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55220;Blue Diesel;1;1.744;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55220;Blue Super;1;1.724;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55220;Gasolio;0;1.864;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55220;Gasolio;1;1.644;25/12/2022 17:55:20;26th;price changed after the 27th 08:01 snapshot, which still held the 26th value
+55221;Benzina;0;1.625;23/12/2022 17:36:08;28th;unchanged since 2022-12-23 17:36, before the 27th 08:01 snapshot
+55221;E-DIESEL;0;1.999;23/12/2022 17:36:08;28th;unchanged since 2022-12-23 17:36, before the 27th 08:01 snapshot
+55221;Gasolio;0;1.685;23/12/2022 17:36:08;28th;unchanged since 2022-12-23 17:36, before the 27th 08:01 snapshot
+55222;Benzina;0;1.824;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Benzina;1;1.604;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Blue Diesel;0;2.004;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Blue Diesel;1;1.784;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Blue Super;0;1.974;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Blue Super;1;1.754;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Gasolio;0;1.904;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55222;Gasolio;1;1.684;26/12/2022 19:58:00;28th;unchanged since 2022-12-26 19:58, before the 27th 08:01 snapshot
+55223;Benzina;0;1.844;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55223;Benzina;1;1.624;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55223;Blue Diesel;0;2.014;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55223;Blue Diesel;1;1.794;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55223;GPL;0;0.759;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55223;Gasolio;0;1.914;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55223;Gasolio;1;1.694;23/12/2022 18:19:14;28th;unchanged since 2022-12-23 18:19, before the 27th 08:01 snapshot
+55224;Benzina;0;1.859;23/12/2022 19:17:23;28th;unchanged since 2022-12-23 19:17, before the 27th 08:01 snapshot
+55224;Benzina;1;1.649;23/12/2022 19:17:23;28th;unchanged since 2022-12-23 19:17, before the 27th 08:01 snapshot
+55224;Gasolio;0;1.899;23/12/2022 19:17:23;28th;unchanged since 2022-12-23 19:17, before the 27th 08:01 snapshot
