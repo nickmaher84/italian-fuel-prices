@@ -1,11 +1,27 @@
 import os
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 
 load_dotenv()
 
+DATABASE_HOST = os.environ.get('DATABASE_HOST') or 'localhost'
+DATABASE_PORT = int(os.environ.get('DATABASE_PORT') or 5432)
+DATABASE_NAME = os.environ.get('DATABASE_NAME') or 'fuel-prices'
+DATABASE_USERNAME = os.environ.get('DATABASE_USERNAME')
+DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD')
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'development'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://localhost/fuel_prices'
+
+    SQLALCHEMY_DATABASE_URI = URL.create(
+        drivername='postgresql+psycopg2',
+        host=DATABASE_HOST,
+        port=DATABASE_PORT,
+        database=DATABASE_NAME,
+        username=DATABASE_USERNAME,
+        password=DATABASE_PASSWORD,
+    ).render_as_string(hide_password=False)
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'executemany_mode': 'values_plus_batch',
