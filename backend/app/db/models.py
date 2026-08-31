@@ -4,7 +4,7 @@ import uuid
 import re
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index
 
 from app.core import db
 
@@ -90,3 +90,11 @@ class PriceChange(db.Model):
     max_extraction_date: Mapped[date] = mapped_column()
     first_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
     last_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('file.file_id'))
+
+    __table_args__ = (
+        Index(
+            'idx_price_change_extraction_brin',
+            'min_extraction_date', 'max_extraction_date',
+            postgresql_using='brin',
+        ),
+    )

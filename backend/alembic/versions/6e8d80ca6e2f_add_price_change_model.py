@@ -37,6 +37,15 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('price_hash'),
     )
 
+    with op.get_context().autocommit_block():
+        op.create_index(
+            'idx_price_change_extraction_brin',
+            'price_change',
+            ['min_extraction_date', 'max_extraction_date'],
+            postgresql_using='brin',
+            postgresql_concurrently=True,
+        )
+
 
 def downgrade() -> None:
     """Downgrade schema."""
