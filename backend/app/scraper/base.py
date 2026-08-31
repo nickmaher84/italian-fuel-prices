@@ -13,26 +13,80 @@ from app.db.models import FileType
 logger = logging.getLogger(__name__)
 
 
-def to_bool(value: str) -> bool:
-    return bool(int(value))
+def to_bool(value: str) -> bool | None:
+    try:
+        return bool(int(value))
+    except (ValueError, TypeError):
+        return None
 
 def to_datetime(value: str) -> datetime | None:
-    if value is None:
-        return value
+    if not isinstance(value, str):
+        return None
 
     if "/" in value:
-        try:
-            return datetime.strptime(value, "%d/%m/%Y %H:%M:%S")
-        except ValueError:
-            return datetime.strptime(value, "%d/%m/%Y")
+        formats = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y")
     else:
+        formats = ("%Y-%m-%d %H:%M:%S", "%y-%m-%d", "%Y-%m-%d")
+
+    for fmt in formats:
         try:
-            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            return datetime.strptime(value, fmt)
         except ValueError:
-            try:
-                return datetime.strptime(value, "%y-%m-%d")
-            except ValueError:
-                return datetime.strptime(value, "%Y-%m-%d")
+            continue
+
+    return None
+
+
+def safe_convert(converter):
+    """Wrap a field converter so a single unparseable value yields None instead
+    of aborting the whole file - source CSVs are occasionally corrupt (embedded
+    NUL bytes, truncated or run-together rows) and we want to load every row we
+    still can."""
+    def convert(value):
+        try:
+            return converter(value)
+        except (ValueError, TypeError):
+            return None
+
+    return convert
+
+TAR_BLOCK = 512
+
+
+def scrub_tar_debris(raw: bytes) -> bytes:
+    """Strip slices of an uncompressed tar that disk corruption on the
+    publisher's side has physically spliced into a source CSV. Exactly one file
+    has ever been hit (2022-12-27; see docs/data-quality/2022-12-27-corruption),
+    and only a file carrying NUL bytes can be affected, so this is a no-op for
+    everything else.
+
+    A tar header sits on a 512-byte boundary with the `ustar` magic at offset
+    257 and is always followed by at least one record of member data. Drop every
+    such header block and the block after it, then strip the NUL padding the
+    splice left behind. Rows torn across a dropped boundary are left broken and
+    get discarded downstream by _drop_unusable_rows."""
+    if b"\x00" not in raw:
+        return raw
+
+    kept, drop_next = [], False
+    for start in range(0, len(raw), TAR_BLOCK):
+        block = raw[start:start + TAR_BLOCK]
+        if drop_next:
+            drop_next = False
+            continue
+        if block[257:262] == b"ustar":
+            drop_next = True
+            continue
+        kept.append(block)
+
+    scrubbed = b"".join(kept).replace(b"\x00", b"")
+    if len(scrubbed) != len(raw):
+        logger.warning(
+            f"Scrubbed {len(raw) - len(scrubbed)} bytes of tar debris / NUL "
+            f"padding from a corrupt source file"
+        )
+    return scrubbed
+
 
 def preprocess_line(values: list[str], delimiter: str, column_count: int) -> list[str]:
     values = [value.strip().strip('"') for value in values]
@@ -105,7 +159,7 @@ class BaseScraper:
             conn.close()
 
     def parse_csv(self, extract: BytesIO):
-        csv_bytes = extract.read()
+        csv_bytes = scrub_tar_debris(extract.read())
         text = csv_bytes.decode('utf-8')
         lines = text.split('\n')
 
@@ -154,9 +208,41 @@ class BaseScraper:
                 model_col, converter = COLUMN_MAPPING[normalised]
                 data = df[col]
                 if converter not in (int, str, float):
-                    data = data.apply(converter)
+                    data = data.apply(safe_convert(converter))
                 new_data[model_col] = data
             else:
                 new_data[col] = df[col]
 
-        return pd.DataFrame(new_data)
+        df = pd.DataFrame(new_data)
+
+        return self._drop_unusable_rows(df)
+
+    @staticmethod
+    def _drop_unusable_rows(df: pd.DataFrame) -> pd.DataFrame:
+        """Drop rows we can't key, price or date - a corrupt row (NUL bytes,
+        merged or truncated fields) otherwise fails the bulk upsert and takes a
+        whole chunk of good rows down with it. entry_date is NOT NULL, so a row
+        whose timestamp wouldn't parse (safe_convert -> NaT) can't be inserted
+        anyway. extraction_date is deliberately not checked here - HistoricScraper
+        back-fills an all-NaT extraction_date column from the filename after
+        create_df()."""
+        numeric = [c for c in ("station_id", "price") if c in df.columns]
+        dates = [c for c in ("entry_date",) if c in df.columns]
+        if not numeric and not dates:
+            return df
+
+        before = len(df)
+
+        for col in numeric:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        df = df.dropna(subset=numeric + dates)
+
+        if "station_id" in df.columns:
+            df["station_id"] = df["station_id"].astype(int)
+
+        dropped = before - len(df)
+        if dropped:
+            logger.warning(f"Dropped {dropped} unparseable row(s) missing {' / '.join(numeric + dates)}")
+
+        return df
