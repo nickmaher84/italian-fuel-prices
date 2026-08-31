@@ -1,6 +1,7 @@
 import logging
-import math
 from datetime import datetime
+
+import pandas as pd
 from werkzeug.http import parse_date
 from pathlib import Path
 
@@ -126,7 +127,7 @@ def ingest_df(session, file, model, df):
 
     try:
         rows = df.to_dict(orient='records')
-        rows = [{k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in row.items()} for row in rows]
+        rows = [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in rows]
 
         records = {}
         for row in rows:
@@ -164,4 +165,5 @@ def ingest_df(session, file, model, df):
 
     except Exception as e:
         session.rollback()
-        logger.error(f"Failed to insert into {model.__tablename__}: {e}")
+        logger.exception(f"Failed to insert into {model.__tablename__}: {e}")
+        raise
