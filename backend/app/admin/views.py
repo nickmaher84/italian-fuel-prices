@@ -2,6 +2,7 @@ import json
 from datetime import date, datetime, timedelta
 
 from collections import namedtuple
+from markupsafe import Markup
 from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
@@ -48,12 +49,42 @@ class StationModelView(ReadOnlyModelView):
     column_filters = ["station_id", "extraction_date", "comune", "province_code", "brand_name", "operator_name"]
 
 
-class StationChangeModelView(ReadOnlyModelView):
+def _format_bool_icon(view, context, model, name):
+    value = getattr(model, name)
+    icon = "fa-check-circle" if value else "fa-times-circle"
+    color = "#28a745" if value else "#dc3545"
+    label = f'{name}: {"true" if value else "false"}'
+    return Markup(f'<span class="fa {icon}" style="color: {color};" title="{label}"></span>')
+
+
+class HexPkModelView(ReadOnlyModelView):
+    DISPLAY_HEX_CHARS = 12
+
+    def get_pk_value(self, model):
+        return getattr(model, self._primary_key).hex()
+
+    def get_one(self, id):
+        return self.session.get(self.model, bytes.fromhex(id))
+
+    @classmethod
+    def _format_hex_pk(cls, view, context, model, name):
+        return getattr(model, name).hex()[:cls.DISPLAY_HEX_CHARS]
+
+    column_formatters = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_formatters = {**self.column_formatters, self._primary_key: self._format_hex_pk}
+        self.column_formatters_detail = {**self.column_formatters_detail, self._primary_key: self._format_hex_pk}
+
+
+class StationChangeModelView(HexPkModelView):
     column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "comune", "province_code", "brand_name", "operator_name"]
 
 
-class PriceChangeModelView(ReadOnlyModelView):
+class PriceChangeModelView(HexPkModelView):
     column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "fuel_description", "self_service"]
+    column_formatters = {"self_service": _format_bool_icon}
 
 
 class PricesDailyView(BaseView):
