@@ -1,9 +1,9 @@
-import pandas as pd
 import redis
 
 from app.celery_app import celery
 from app.core import app as flask_app, db
 from app.db.models import FileType
+from app.quarters import DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
 from app.scraper.daily import DailyScraper
 from app.scraper.historic import HistoricScraper
 from app.services.station_sync import StationSync
@@ -29,20 +29,6 @@ class RedisFlag:
 
 
 sync_stations_pending = RedisFlag("sync_stations:pending")
-
-
-DEFAULT_START_QUARTER = pd.Period("2015Q1", freq='Q')
-
-
-def latest_complete_quarter() -> pd.Period:
-    return pd.Period.now(freq='Q') - 1
-
-
-def generate_quarters(start: str | pd.Period = DEFAULT_START_QUARTER, end: str | pd.Period | None = None):
-    end = pd.Period(end, freq='Q') if end else latest_complete_quarter()
-
-    for period in pd.period_range(start=start, end=end, freq='Q'):
-        yield period.year, period.quarter
 
 
 def run_daily_scrape():
@@ -80,7 +66,7 @@ def sync_stations_task() -> None:
         sync_stations_pending.clear()
 
 
-def _dispatch_scrapes(start: str | pd.Period = DEFAULT_START_QUARTER, end: str | pd.Period | None = None, file_types: list[str] | None = None):
+def _dispatch_scrapes(start: str = str(DEFAULT_START_QUARTER), end: str | None = None, file_types: list[str] | None = None):
     file_types = [FileType(t) for t in file_types] if file_types else list(FileType)
 
     for year, quarter in generate_quarters(start=start, end=end):

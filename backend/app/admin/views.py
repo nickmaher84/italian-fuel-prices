@@ -3,7 +3,8 @@ from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
 import app.db.models as m
 from app.db.models import FileType
-from app.tasks import historic_scrape_task, scrape_range_task, run_daily_scrape, DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
+from app.tasks import historic_scrape_task, scrape_range_task, run_daily_scrape
+from app.quarters import DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
 from app.celery_app import celery
 from app.core import db
 
