@@ -1,3 +1,6 @@
+from datetime import date, datetime, timedelta
+
+from collections import namedtuple
 from flask_admin.contrib.sqla import ModelView
 from flask_admin import AdminIndexView, BaseView, expose
 from flask import redirect, url_for, flash, request
@@ -5,6 +8,7 @@ import app.db.models as m
 from app.db.models import FileType
 from app.tasks import historic_scrape_task, scrape_range_task, run_daily_scrape
 from app.quarters import DEFAULT_START_QUARTER, generate_quarters, latest_complete_quarter
+from app.services.mirror import Mirror
 from app.celery_app import celery
 from app.core import db
 
@@ -42,6 +46,66 @@ class StationChangeModelView(ReadOnlyModelView):
 
 class PriceChangeModelView(ReadOnlyModelView):
     column_filters = ["station_id", "min_extraction_date", "max_extraction_date", "fuel_description", "self_service"]
+
+
+class PricesDailyView(BaseView):
+    MAX_PRICES_DAILY_RANGE = timedelta(weeks=52)
+    MIN_START_DATE = date(2015, 1, 1)
+
+    @expose("/")
+    def index(self):
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        station_id = request.args.get("station_id")
+        fuel_description = request.args.get("fuel_description")
+        self_service = request.args.get("self_service")
+
+        rows = None
+        error = None
+
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+                if not station_id:
+                    error = "Station ID is required."
+                elif start < self.MIN_START_DATE:
+                    error = "Start date must not be before 2015."
+                elif end < start:
+                    error = "End date must not be before start date."
+                elif end - start > self.MAX_PRICES_DAILY_RANGE:
+                    error = f"Range too large - please request at most {self.MAX_PRICES_DAILY_RANGE.days} days at a time."
+                else:
+                    mirror = Mirror()
+                    records = mirror.prices_daily(start, end, [int(station_id)])
+
+                    PricesDailyRow = namedtuple(
+                        "PricesDailyRow",
+                        ["price_date", "station_id", "fuel_description", "self_service", "price", "entry_date", "price_hash"],
+                    )
+                    rows = [PricesDailyRow(*row) for row in records]
+
+                    if fuel_description:
+                        needle = fuel_description.lower()
+                        rows = [r for r in rows if needle in r.fuel_description.lower()]
+
+                    if self_service:
+                        rows = [r for r in rows if r.self_service == (self_service == "true")]
+
+            except ValueError:
+                error = "Please enter valid dates (YYYY-MM-DD) and a numeric station ID."
+
+        return self.render(
+            "prices_daily.html",
+            start_date=start_date,
+            end_date=end_date,
+            station_id=station_id,
+            fuel_description=fuel_description,
+            self_service=self_service,
+            rows=rows,
+            error=error,
+        )
 
 
 class AdminView(AdminIndexView):
