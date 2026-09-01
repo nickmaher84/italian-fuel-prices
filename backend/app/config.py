@@ -43,7 +43,7 @@ class Config:
     CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/0'
     CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND') or 'redis://localhost:6379/0'
 
-    MIRROR_PATH = Path(os.environ['MIRROR_PATH']) if os.environ.get('MIRROR_PATH') else BASE_DIR / 'mirror.duckdb'
+    MIRROR_PATH = Path(os.environ['MIRROR_PATH']) if os.environ.get('MIRROR_PATH') else BASE_DIR / 'data' / 'mirror.duckdb'
     MIRROR_MEMORY_LIMIT = os.environ.get('MIRROR_MEMORY_LIMIT')
 
 

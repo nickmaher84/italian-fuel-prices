@@ -7,5 +7,4 @@ __pycache__/
 .vscode/
 .idea/
 celerybeat-schedule
-backend/mirror.duckdb
-backend/mirror.duckdb*
+backend/data/
